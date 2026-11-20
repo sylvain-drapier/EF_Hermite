@@ -1,0 +1,90 @@
+<html>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+      <div class="mermaid">
+    
+        classDiagram
+          class Elem {
+            C : float, int
+            EI
+            ES
+            M_e : list
+            S : float
+            Smasse
+            angle : int
+            def_eff : ndarray
+            f_e : list
+            kel_e : list, ndarray
+            kg_e : list
+            le : int
+            node1
+            node2
+            num_elem
+            px
+            py
+            mise_a_jour_Me()
+            mise_a_jour_fe()
+            mise_a_jour_kel()
+            mise_a_jour_kg()
+          }
+          class Node {
+            numero
+            position
+            theta : int
+            u : int
+            u1 : int
+            u2 : int
+            v : int
+            x1
+            x2
+          }
+          class denominator {
+          }
+          class imag {
+          }
+          class numerator {
+          }
+          class object {
+          }
+          class pbEF_poutre {
+            F_con : ndarray
+            F_rep : ndarray
+            F_tot : ndarray
+            K_global : ndarray
+            Kgeom_global : ndarray
+            M_global : ndarray
+            elem_global : list
+            fixed_dofs : list
+            mode_min : list
+            nb_nodes
+            nodes_elem
+            nodes_global
+            props_elem
+            total_dofs
+            vibration : bool
+            vp_min : list
+            Affichage(mot_clef, colormap, vp)
+            Application_CL(forces, deplacements)
+            Calcul_Def_Eff()
+            Calcul_Modes_Propres(mot_clef, n_modes)
+            MAJ_Rigidite_Geom()
+            Maillage_Assemblage()
+            Resol()
+          }
+          class real {
+          }
+          class type {
+            mro()*
+          }
+          Elem --|> object
+          Node --|> object
+          pbEF_poutre --|> object
+          denominator --|> object
+          imag --|> object
+          numerator --|> object
+          real --|> object
+          type --|> object
+  
+       </div>
+  </body>
+</html>

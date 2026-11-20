@@ -1,0 +1,11 @@
+# Fichiers système et éditeurs
+.DS_Store
+.vscode/
+.ipynb_checkpoints/
+.virtual_documents/
+__pycache__/
+
+# Fichiers locaux, hors dépôt
+jupyter
+sauvegarde_*/
+html/.buildinfo
