@@ -44,7 +44,7 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
     - x et y : coordonnées
     - u et v, u1 et u2, theta: degrés de liberté dans les axes locaux et dans les axes structure
     - position : indice dans la liste 'nodes_global' des noeuds construite initialement
-    - px, py : efforts répartis définis aux noeuds (0 sinon)
+    - px, py : efforts répartis définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2) (0 sinon)
     
 - **Classe Elem** = Eléments contenant :
     - numero
@@ -141,6 +141,7 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
        
 import numpy as np
 import scipy as sc
+import scipy.linalg  # nécessaire pour sc.linalg avec scipy < 1.9
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from matplotlib import ticker
@@ -174,7 +175,7 @@ class Node:
         ddl rotation    
     .. attribute:: px, py : float 
   
-        px, py : efforts répartis définis au noeuds (0 sinon)         
+        px, py : efforts répartis définis aux noeuds, dans le repère de structure (x1, x2) (0 sinon)         
 
     .. attribute:: position : int 
     
@@ -190,7 +191,7 @@ class Node:
         self.u1 = u1 # dans le repère globa  
         self.u2 = u2      
         self.theta = theta
-        self.px = px # dans le repère de la poutre
+        self.px = px # dans le repère de structure (projetés dans le repère local par Elem)
         self.py = py
 
     def __str__(self):
@@ -201,8 +202,8 @@ def Renvoi_index_node(n_node, liste):
     """ Renvoi l'indice du noeud n_node dans la liste de noeuds 'liste' """
     for i in range(len(liste)):
         if liste[i].numero == n_node:
-            return i  # Renvoie la position de l'élément si trouvé
-    return -100  # Renvoie -1 si l'élément n'est pas trouvé 
+            return i  # Renvoie la position du noeud si trouvé
+    raise ValueError(f"Le noeud {n_node} n'existe pas.")
 
 """
 ======================================  utilitaires de la classe Elem ===============================
@@ -293,7 +294,7 @@ def calcul_M(Smasse, C, S, le):
         [-22*le*S, 22*C*le, 4*le**2, -13*le*S, 13*C*le, -3*le**2],
         [70*C**2 + 54*S**2, 16*C*S, -13*le*S, 140*C**2 + 156*S**2, -16*C*S, 22*le*S],
         [16*C*S, 54*C**2 + 70*S**2, 13*C*le, -16*C*S, 156*C**2 + 140*S**2, -22*C*le],
-        [13*le*S, -13*C*le, -3*le, 22*le*S, -22*C*le, 4*le**2]
+        [13*le*S, -13*C*le, -3*le**2, 22*le*S, -22*C*le, 4*le**2]  # SD 11/2026 : -3*le**2 (et non -3*le) => M symétrique
         ])
     return M_elem
 
@@ -381,40 +382,13 @@ class Elem:
         #              +-----------> x1
         # global C, S
   
-        # Ne pas regarder le signe de l'angle, le laisser défini par l'ordre des noeuds
-        # (self.C, self.S) = (1., 0.)     
-        # if np.abs(x2_2 - x1_2) > 1E-13 : # angle par rapport à l'horizontal x1
-        #     if np.abs(x2_1 - x1_1) > 1E-13:
-        #         self.C = ( (x2_1 - x1_1) / le)
-        #         self.S = ( (x2_2 - x1_2) / le )                
-        #         self.angle = np.arctan( self.S / self.C )
-        #         if ((self.C*self.S > 0) and (self.C<0)):
-        #             self.angle += np.pi
-        #         elif ((self.C*self.S <0) and (self.C<0)):
-        #             self.angle += np.pi
-        #     else :
-        #         (self.C, self.S) = (0, 1)
-        #         self.angle = np.pi/2
-                
-        (self.C, self.S) = (1., 0.)     
-        if np.abs(x2_2 - x1_2) < 1E-13 : # aligne sur x1
-            self.C = 1 * np.sign(x2_1 - x1_1)
-            if x2_1 > x1_1 :
-                self.angle = 0
-            else :
-                self.angle = np.pi
-#np.sign renvoie 0 si qtité nulle
-        elif np.abs(x2_1 - x1_1) < 1E-13: # aligne sur x2
-            (self.C, self.S) = (0, 1 * np.sign(x2_2 - x1_2))
-            self.angle = np.pi/2 * np.sign(x2_2 - x1_2)
-        else :
-            self.C = ( (x2_1 - x1_1) / le)
-            self.S = ( (x2_2 - x1_2) / le )                
-            self.angle = np.arctan( self.S / self.C )
-            if ((self.C*self.S > 0) and (self.C<0)):
-                self.angle += np.pi
-            elif ((self.C*self.S <0) and (self.C<0)):
-                self.angle += np.pi
+        # L'angle est défini par l'ordre des noeuds (noeud 1 -> noeud 2) : t = (C, S)
+        # arctan2 donne directement l'angle dans ]-pi, pi], quel que soit le quadrant
+        if le < 1E-13:
+            raise ValueError(f"L'élément {num_elem} est de longueur nulle (noeuds {inode1} et {inode2} confondus)")
+        self.C = (x2_1 - x1_1) / le
+        self.S = (x2_2 - x1_2) / le
+        self.angle = np.arctan2(self.S, self.C)
                 
         alpha = ES / le
         beta = EI / le**3
@@ -519,7 +493,7 @@ def Renvoi_index_elem(n_elem, liste):
     for i in range(len(liste)):
         if liste[i].num_elem == n_elem:
             return i  # Renvoie la position de l'élément si trouvé
-    return -1  # Renvoie -1 si l'élément n'est pas trouvé 
+    raise ValueError(f"L'élément {n_elem} n'existe pas.")
 
 """
 2/ 
@@ -531,71 +505,56 @@ def Renvoi_index_elem(n_elem, liste):
 
 def fonct_Maille_depuis_Fichier(nomfic_noeuds, nomfic_elements):
     """
-Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes ou 5 colonnes : num_noeud, x, y + éventuellement px, py dans le repère local) et 
+Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes ou 5 colonnes : num_noeud, x, y + éventuellement px, py dans le repère de structure x1, x2) et 
 les connectivités (3 colonnes : num_elem, noeud1, noeud2)
 
 *Retourne :* la liste des noeuds 'nodes_global' et la connectivité des éléments 'nodes_elem'
 
 *Vérifications :* 
     1. tous les noeuds nécessaires pour construire les éléments existent; sinon arrêt et affichage Erreur
-    2. les noeuds non utilisés sont supprimés - message d'avertissement
+    2. tous les noeuds définis sont utilisés par au moins un élément; sinon arrêt et affichage Erreur
     
     """
     
-    nodes_global=[]
-    ipos_node = 0
+    # Les erreurs (fichier absent, ligne mal formatée, noeud manquant) sont levées
+    # avec le nom du fichier et le numéro de ligne, pour être lisibles dans Jupyter.
+    nodes_global = []
     liste_nodes_temp = []
-    try:
-        with open(nomfic_noeuds, 'r') as fichier:
-            for ligne in fichier:
-                if ligne.strip() and not ligne.strip().startswith('#'):
-                    ipos_node += 1
-                    valeurs = ligne.strip().split(',')
-                    if len(valeurs) == 3:
-                        nodes_global.append(Node(int(valeurs[0]), ipos_node-1, float(valeurs[1]), float(valeurs[2])))    
-                        liste_nodes_temp.append(int(valeurs[0]))
-                    elif len(valeurs) == 5 :
-                        nodes_global.append(Node(int(valeurs[0]), ipos_node-1, float(valeurs[1]), float(valeurs[2]), 
-                                                 float(valeurs[3]), float(valeurs[4])))    
-                        liste_nodes_temp.append(int(valeurs[0]))
-                    else :    
-                        raise ValueError("Ligne",ligne," mal formatée")
-    
-    except ValueError as e:
-        print(f"Erreur dans le fichier : {e}")
-    except FileNotFoundError:
-        print("Le fichier est introuvable.")
-       
+    with open(nomfic_noeuds, 'r') as fichier:
+        for num_ligne, ligne in enumerate(fichier, start=1):
+            if not ligne.strip() or ligne.strip().startswith('#'):
+                continue
+            valeurs = ligne.strip().split(',')
+            if len(valeurs) not in (3, 5):
+                raise ValueError(f"{nomfic_noeuds}, ligne {num_ligne} mal formatée (3 ou 5 colonnes attendues) : {ligne.strip()}")
+            num = int(valeurs[0])
+            if num in liste_nodes_temp:
+                raise ValueError(f"{nomfic_noeuds}, ligne {num_ligne} : le noeud {num} est défini deux fois")
+            reels = [float(v) for v in valeurs[1:]]
+            nodes_global.append(Node(num, len(nodes_global), *reels))
+            liste_nodes_temp.append(num)
+
     nodes_elem = []
-    inode1 = 0
-    inode2 = 0  
     liste_node_elem_temp = []
-    try:
-        with open(nomfic_elements, 'r') as fichier:
-            for ligne in fichier:
-                if ligne.strip() and not ligne.strip().startswith('#'):
-                    valeurs = ligne.strip().split(',')
-                    (inode1, inode2) = ( int(valeurs[1]) , int(valeurs[2]) )
-                    # vérifie que les noeuds nécessaires sont bien définis
-                    if len(valeurs) != 3:
-                        raise ValueError("Ligne",ligne," mal formatée")
-                    elif inode1 in liste_nodes_temp :
-                        if inode2 in liste_nodes_temp :
-                            nodes_elem.append([int(valeurs[0]), inode1, inode2])
-                            liste_node_elem_temp.append(inode1)
-                            liste_node_elem_temp.append(inode2)
-                    else :
-                        raise ValueError("L'élément",int(valeurs[0])," utilise un noeud qui n'est pas défini")
-    
-    except ValueError as e:
-        print(f"Erreur dans le fichier : {e}")
-    except FileNotFoundError:
-        print("Le fichier est introuvable.")  
-        
+    with open(nomfic_elements, 'r') as fichier:
+        for num_ligne, ligne in enumerate(fichier, start=1):
+            if not ligne.strip() or ligne.strip().startswith('#'):
+                continue
+            valeurs = ligne.strip().split(',')
+            if len(valeurs) != 3:
+                raise ValueError(f"{nomfic_elements}, ligne {num_ligne} mal formatée (3 colonnes attendues) : {ligne.strip()}")
+            (num_elem, inode1, inode2) = (int(valeurs[0]), int(valeurs[1]), int(valeurs[2]))
+            # vérifie que les noeuds nécessaires sont bien définis
+            for inode in (inode1, inode2):
+                if inode not in liste_nodes_temp:
+                    raise ValueError(f"{nomfic_elements}, ligne {num_ligne} : l'élément {num_elem} utilise le noeud {inode} qui n'est pas défini")
+            nodes_elem.append([num_elem, inode1, inode2])
+            liste_node_elem_temp += [inode1, inode2]
+
     # vérifie que tous les noeuds sont bien utilisés 
     result = [x for x in liste_nodes_temp if x not in liste_node_elem_temp]
-    if not result == [] :
-        raise ValueError("Le(s) noeud(s)", result, "n(e sont) pas utilisé(s)")
+    if result:
+        raise ValueError(f"Le(s) noeud(s) {result} n'est (ne sont) utilisé(s) par aucun élément")
 
     
     
@@ -717,20 +676,22 @@ propriétés méca ES, EI ou Smasse d'un élément changent (chargements répart
     # print('dof_local = ',dof_local) 
 
     # il faut d'abord supprimer les contributions de l'élément à modifier
+    # (la copie K_global_copie, sans CL Dirichlet, est mise à jour sur TOUS les ddls, comme à la création)
+    kel_ancien = elem_temp.kel_e.copy()
     for i in dof_local:
         for j in dof_local:
             K_global[dof_global[i], dof_global[j]] -= elem_temp.kel_e[i, j]
             M_global[dof_global[i], dof_global[j]] -= elem_temp.M_e[i, j]
-            K_global_copie[dof_global[i], dof_global[j]] -= elem_temp.kel_e[i, j]
-            # print('K_global[',dof_global[i],',',dof_global[j],'] -= elem_temp.kel_e[',i,',',j,']')
-    
+
     elem_temp.mise_a_jour_kel()
     elem_temp.mise_a_jour_Me()
     for i in dof_local:
         for j in dof_local:
             K_global[dof_global[i], dof_global[j]] += elem_temp.kel_e[i, j]
             M_global[dof_global[i], dof_global[j]] += elem_temp.M_e[i, j]
-            K_global_copie[dof_global[i], dof_global[j]] -= elem_temp.kel_e[i, j]
+    for i in range(6):
+        for j in range(6):
+            K_global_copie[dof_global[i], dof_global[j]] += elem_temp.kel_e[i, j] - kel_ancien[i, j]
 
 def fonct_MAJ_rigidite_geom_elem(pbEF, num_elem):
     """
@@ -801,7 +762,19 @@ Supprime les contributions de l'élément n_elem et le supprime de la liste glob
     elem_global = pbEF.elem_global
 
     ind_destroy = Renvoi_index_elem(n_elem, elem_global)
-    Modif_Proprietes_Elem (n_elem, 0, 0, 0, pbEF )
+    elem_temp = elem_global[ind_destroy]
+    # rigidité élastique et masse annulées
+    Modif_Proprietes_Elem(pbEF, n_elem, 0, 0, 0)
+    # rigidité géométrique annulée (effort normal nul)
+    elem_temp.def_eff[2] = 0.
+    fonct_MAJ_rigidite_geom_elem(pbEF, n_elem)
+    # efforts répartis de l'élément retirés du second membre
+    ip1, ip2 = elem_temp.node1.position, elem_temp.node2.position
+    dof_global = [3*ip1, 3*ip1+1, 3*ip1+2, 3*ip2, 3*ip2+1, 3*ip2+2]
+    for i in range(6):
+        pbEF.F_tot_copie[dof_global[i]] -= elem_temp.f_e[i]
+        if dof_global[i] not in pbEF.fixed_dofs:
+            pbEF.F_rep[dof_global[i]] -= elem_temp.f_e[i]
     del elem_global[ind_destroy]
 
     return 
@@ -906,14 +879,14 @@ Prise en compte des conditions de Neumann et Dirichlet homogènes / non-homogèn
         liste_node_forces = [forces_temp[0] for forces_temp in forces]
     liste_node_dep = [dep_temp[0] for dep_temp in deplacements]
     if not ( all(x in liste_node_temp for x in liste_node_dep) and (all(x in liste_node_temp for x in liste_node_forces) ) ) :
-            sys.exit("Une condition aux limites est imposée sur un noeud qui n'existe pas.")  
+            raise ValueError("Une condition aux limites est imposée sur un noeud qui n'existe pas.")  
 
     # on vérifie que le DDL existe aussi; sinon Erreur
     liste_ddl_dep = [dep_temp[1] for dep_temp in deplacements]
     liste_ddl_F = [forces_temp[1] for forces_temp in forces]
     
     if not ( (all(x in [1,2,3] for x in liste_ddl_F) ) and ( all(x in [1,2,3] for x in liste_ddl_dep) ) ):
-            sys.exit("Une des conditions aux limites est appliquée sur un ddl qui n'existe pas.")  
+            raise ValueError("Une des conditions aux limites est appliquée sur un ddl qui n'existe pas.")  
             
     # Neumann      
     liste_dof_forces = [Renvoi_index_node(row[0], pbEF.nodes_global) * 3 + (row[1] - 1) for row in forces]                   
@@ -929,7 +902,7 @@ Prise en compte des conditions de Neumann et Dirichlet homogènes / non-homogèn
     
     # On vérifie que des CL de Dirichlet et Neumann ne sont pas imposées sur le même ddl
     if any(x in liste_dof_forces for x in liste_fixed_dofs):
-        sys.exit("ATTENTION : conditions de Dirichlet et Neumann appliquées sur le même ddl.")
+        raise ValueError("ATTENTION : conditions de Dirichlet et Neumann appliquées sur le même ddl.")
 
     pbEF.fixed_dofs = liste_fixed_dofs
     pbEF.liste_dofs_imposes = [sous_liste for sous_liste in deplacements if sous_liste[2] != 0]
@@ -1138,10 +1111,8 @@ pour ne pas gérer les éléments spéciaux -> les noeuds sont tracés 2 fois (p
     x2_elem = []
        
     # Palette de couleurs
-    if colormap : 
-        cmap = plt.cm.get_cmap(colormap)
-    else  :
-        cmap = plt.cm.get_cmap('coolwarm')
+    # plt.get_cmap reste disponible dans matplotlib >= 3.9 (plt.cm.get_cmap a été supprimé)
+    cmap = plt.get_cmap(colormap if colormap else 'coolwarm')
     fontsize = 4
     markersize = 2
     lw = 0.3
@@ -1198,7 +1169,7 @@ pour ne pas gérer les éléments spéciaux -> les noeuds sont tracés 2 fois (p
             num_elem.append(elem_temp.num_elem)
             x1_elem.append( (1/2) * (elem_temp.node1.x1 + elem_temp.node1.u1*amplification_def + \
                                  elem_temp.node2.x1 + elem_temp.node2.u1*amplification_def))
-            x2_elem.append( (1/2) * (elem_temp.node1.x2 + elem_temp.node2.u2*amplification_def + \
+            x2_elem.append( (1/2) * (elem_temp.node1.x2 + elem_temp.node1.u2*amplification_def + \
                                  elem_temp.node2.x2 + elem_temp.node2.u2*amplification_def))
             if ind_vecteur_affiche < 5 :
                 vecteur_affiche[indice] = elem_temp.def_eff[ind_vecteur_affiche]              
@@ -1569,8 +1540,8 @@ class pbEF_poutre:
         .. Retourne : liste globale des éléments mis à jour
         
         """
-        for ind_elem, elem in enumerate(self.elem_global):
-            fonct_MAJ_rigidite_geom_elem(self, ind_elem+1)
+        for elem in self.elem_global:
+            fonct_MAJ_rigidite_geom_elem(self, elem.num_elem)  # numéro réel, pas l'indice dans la liste
         return self.elem_global       
     
     def Calcul_Modes_Propres(self, mot_clef, n_modes):
