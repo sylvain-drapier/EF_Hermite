@@ -394,31 +394,12 @@ class Elem:
         #              +-----------> x1
         # global C, S
   
-        # Ne pas regarder le signe de l'angle, le laisser défini par l'ordre des noeuds
-        # (self.C, self.S) = (1., 0.)     
-        # if np.abs(x2_2 - x1_2) > 1E-13 : # angle par rapport à l'horizontal x1
-        #     if np.abs(x2_1 - x1_1) > 1E-13:
-        #         self.C = ( (x2_1 - x1_1) / le)
-        #         self.S = ( (x2_2 - x1_2) / le )                
-        #         self.angle = np.arctan( self.S / self.C )
-        #         if ((self.C*self.S > 0) and (self.C<0)):
-        #             self.angle += np.pi
-        #         elif ((self.C*self.S <0) and (self.C<0)):
-        #             self.angle += np.pi
-        #     else :
-        #         (self.C, self.S) = (0, 1)
-        #         self.angle = np.pi/2
-                
-        (self.C, self.S) = (1., 0.)     
-        if np.abs(x2_2 - x1_2) < 1E-13 : # aligne sur x1
-            self.C = 1 * np.sign(x2_1 - x1_1)
-#np.sign renvoie 0 si qtité nulle
-        elif np.abs(x2_1 - x1_1) < 1E-13: # aligne sur x2
-            (self.C, self.S) = (0, 1 * np.sign(x2_2 - x1_2))
-        else :
-            self.C = ( (x2_1 - x1_1) / le)
-            self.S = ( (x2_2 - x1_2) / le )                
-        # angle en DEGRES dans ]-180, 180] (exact : 0, 180, +/-90 pour les éléments alignés sur les axes)
+        # L'angle est défini par l'ordre des noeuds (noeud 1 -> noeud 2) : t = (C, S)
+        # arctan2 donne directement l'angle dans ]-180, 180] (en DEGRES), quel que soit le quadrant
+        if le < 1E-13:
+            raise ValueError(f"L'élément {num_elem} est de longueur nulle (noeuds {inode1} et {inode2} confondus)")
+        self.C = (x2_1 - x1_1) / le
+        self.S = (x2_2 - x1_2) / le
         self.angle = np.degrees(np.arctan2(self.S, self.C))
                 
         alpha = ES / le
