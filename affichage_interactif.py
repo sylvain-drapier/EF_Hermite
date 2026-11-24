@@ -287,7 +287,8 @@ def figure(pb, champ='u', q=None, ampli=None, hermite=True, representation='coul
             pointe = Xh['X'] + s*np.outer(ch[champ], Xh['n'])
             poly = np.vstack([Xh['X'], pointe[::-1], Xh['X'][:1]])
             moy = ch[champ].mean()
-            coul = sample_colorscale(echelle, [(moy - cmin)/(cmax - cmin)])[0]
+            # np.clip : pour un champ constant (N, T), la moyenne arrondie peut dépasser cmax de 1 ulp
+            coul = sample_colorscale(echelle, [float(np.clip((moy - cmin)/(cmax - cmin), 0, 1))])[0]
             fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode='lines', fill='toself',
                                      fillcolor=coul.replace('rgb', 'rgba').replace(')', ',0.45)'),
                                      line=dict(color=coul, width=1), hoverinfo='skip', showlegend=False))
