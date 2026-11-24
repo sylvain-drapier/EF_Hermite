@@ -13,6 +13,9 @@ Utilisation dans un notebook ::
     AI.vue(pb)                      # statique : choix du champ, survol des valeurs
     AI.vue_modes(pb)                # flambage / vibration : choix du mode + animation
     AI.compare([pb2, pb4, pb8], ['2 élts', '4 élts', '8 élts'], mode=1)
+    AI.tableau_noeuds(pb).show()    # ddls et réactions aux noeuds
+    AI.tableau_elements(pb).show()  # géométrie, charges et efforts internes des éléments
+    AI.tableau_valeurs_propres([pb0, pb1], ['initial', 'modifié']).show()
 
 Sans ipywidgets, les fonctions ``figure``, ``figure_mode`` et ``compare`` renvoient
 des figures Plotly utilisables seules (``fig.show()``, ``fig.write_html(...)``).
@@ -446,6 +449,69 @@ def compare(liste_pb, noms=None, mode=None, hermite=True, ampli=None, n_pts=15, 
         if lignes_titre:
             titre += "<br><sup>" + "  ·  ".join(lignes_titre) + "</sup>"
     return _mise_en_page(fig, titre, lref)
+
+
+# =====================================================================================
+#                                  TABLEAUX
+# =====================================================================================
+def _tableau(entetes, colonnes, titre, formats):
+    """Tableau Plotly (défilement intégré au-delà d'une vingtaine de lignes)."""
+    n = len(colonnes[0]) if colonnes else 0
+    cellules = [[(f if isinstance(v, (int, float, np.floating, np.integer)) else '{}').format(v)
+                 for v in col] for col, f in zip(colonnes, formats)]
+    fig = go.Figure(go.Table(
+        header=dict(values=[f"<b>{e}</b>" for e in entetes], fill_color='#dfe6ee', align='center'),
+        cells=dict(values=cellules, align='right', height=24,
+                   fill_color=[['white', '#f5f7fa']*(n//2 + 1)])))
+    fig.update_layout(title=dict(text=titre, x=0.5), margin=dict(l=10, r=10, t=50, b=10),
+                      height=min(110 + 26*n, 620))
+    return fig
+
+
+def tableau_noeuds(pb, titre="Noeuds : déplacements et réactions (repère de structure)"):
+    """Tableau des noeuds : coordonnées, ddls (u1, u2, theta) et réactions (R1, R2, Mr).
+    Les réactions sont celles de pb.reactions (nulles tant que pb.Calcul_Reactions() n'a pas été appelé)."""
+    q = ddls_noeuds(pb)
+    R = np.asarray(pb.reactions, dtype=float).reshape(-1, 3) if len(pb.reactions) else np.zeros_like(q)
+    cols = [[n.numero for n in pb.nodes_global], [n.x1 for n in pb.nodes_global], [n.x2 for n in pb.nodes_global],
+            q[:, 0], q[:, 1], q[:, 2], R[:, 0], R[:, 1], R[:, 2]]
+    return _tableau(['Noeud', 'x1', 'x2', 'u1', 'u2', 'θ', 'R1', 'R2', 'Mr'], cols, titre,
+                    ['{:d}', '{:.4g}', '{:.4g}'] + ['{:.4e}']*6)
+
+
+def tableau_elements(pb, titre="Éléments : géométrie, charges réparties (repère local) et efforts internes"):
+    """Tableau des éléments : noeuds, angle (degrés), longueur, (px, py) locaux, N, T, M au milieu de l'élément.
+    Les efforts sont ceux de pb.Calcul_Def_Eff() (convention du code : M = EI v'', T = -dM/dx)."""
+    E = pb.elem_global
+    cols = [[e.num_elem for e in E], [f"{e.node1.numero} → {e.node2.numero}" for e in E],
+            [e.angle for e in E], [e.le for e in E], [e.px for e in E], [e.py for e in E],
+            [e.def_eff[2] for e in E], [e.def_eff[3] for e in E], [e.def_eff[4] for e in E]]
+    return _tableau(['Élément', 'Noeuds', 'Angle (°)', 'Longueur', 'px', 'py', 'N', 'T', 'M (milieu)'], cols, titre,
+                    ['{:d}', '{}', '{:.2f}', '{:.4g}', '{:.3g}', '{:.3g}', '{:.4e}', '{:.4e}', '{:.4e}'])
+
+
+def tableau_valeurs_propres(liste_pb, noms=None, reference=None, nom_reference='Référence', titre=None):
+    """Valeurs propres (pulsations en rad/s ou multiplicateurs de flambage) de un ou plusieurs problèmes,
+    mode par mode. reference : liste de valeurs (analytiques...) ajoutée en dernière colonne, avec
+    l'écart relatif du premier problème ; à n'utiliser que si elle correspond au même problème."""
+    noms = noms or [f"Problème {i+1}" for i in range(len(liste_pb))]
+    vps = [np.asarray(p.vp_min, dtype=float) for p in liste_pb]
+    n = max(len(v) for v in vps)
+    col = lambda v: [v[k] if k < len(v) else float('nan') for k in range(n)]
+    entetes, cols, fmts = ['Mode'], [list(range(1, n + 1))], ['{:d}']
+    for nom, v in zip(noms, vps):
+        entetes.append(nom); cols.append(col(v)); fmts.append('{:.5e}')
+    if len(vps) == 2:
+        entetes.append(f"{noms[1]} / {noms[0]}")
+        cols.append([b/a if a else float('nan') for a, b in zip(col(vps[0]), col(vps[1]))]); fmts.append('{:.5g}')
+    if reference is not None:
+        ref = col(np.asarray(reference, dtype=float))
+        entetes += [nom_reference, f"Écart {noms[0]}"]
+        cols += [ref, [abs(a - r)/abs(r) if r else float('nan') for a, r in zip(col(vps[0]), ref)]]
+        fmts += ['{:.5e}', '{:.2e}']
+    if titre is None:
+        titre = "Pulsations propres (rad/s)" if liste_pb[0].vibration else "Charges critiques (multiplicateurs du chargement)"
+    return _tableau(entetes, cols, titre, fmts)
 
 
 # =====================================================================================
