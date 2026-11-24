@@ -230,6 +230,33 @@ def test_vibration_console_convergence():
     verifie("vibration console 10 élts : 1er mode axial", w[2], np.pi/2*np.sqrt(ES/m)/L, 5e-3)  # interpolation axiale linéaire : convergence plus lente
 
 
+def test_vibration_console_inclinee():
+    """Console inclinée (15° et autres quadrants), 10 éléments : pulsations identiques à la console
+    horizontale et conformes à l'analytique (3 modes de flexion + 1er mode axial) ; modes 1, 2, 4
+    purement transverses, mode 3 purement axial ; convergence en h^4 du 1er mode à 15°."""
+    beta_L = [1.87510407, 4.69409113, 7.85475744]
+    w_flex = [b**2*np.sqrt(EI/(m*L**4)) for b in beta_L]
+    ana = [w_flex[0], w_flex[1], np.pi/2*np.sqrt(ES/m)/L, w_flex[2]]  # h/L = 0.15 : le 3e mode est axial
+    noms = ["1er mode de flexion", "2e mode de flexion", "1er mode axial", "3e mode de flexion"]
+    tol = (1e-5, 1e-4, 2e-3, 1e-3)  # interpolation axiale linéaire : convergence plus lente du mode axial
+    w0, _ = probleme_poutre(10).Calcul_Modes_Propres('Vibration', 4)
+    for angle in (15.0, 105.0, 195.0, -75.0):
+        C, S = np.cos(np.radians(angle)), np.sin(np.radians(angle))
+        w, modes = probleme_poutre(10, angle=angle).Calcul_Modes_Propres('Vibration', 4)
+        w, modes = np.asarray(w), np.asarray(modes)
+        compare(f"vibration console inclinée {angle:.0f}° / horizontale : pulsations", np.asarray(w0), w)
+        for k in range(4):
+            verifie(f"vibration console inclinée {angle:.0f}° : {noms[k]}", w[k], ana[k], tol[k])
+            q = modes[:, k].reshape(-1, 3)
+            axial, transverse = np.abs(q[:, 0]*C + q[:, 1]*S).max(), np.abs(-q[:, 0]*S + q[:, 1]*C).max()
+            parasite = transverse/axial if k == 2 else axial/transverse
+            assert parasite < 1e-10, f"angle {angle}° : mode {k+1} non découplé ({parasite:.1e})"
+    ecarts = [abs(probleme_poutre(n, angle=15.0).Calcul_Modes_Propres('Vibration', 1)[0][0] - w_flex[0])/w_flex[0]
+              for n in (2, 4, 8)]
+    print(f"  vibration console inclinée 15° : écarts 1er mode pour 2/4/8 élts = {ecarts[0]:.1e} / {ecarts[1]:.1e} / {ecarts[2]:.1e}")
+    assert ecarts[1] < ecarts[0]/10 and ecarts[2] < ecarts[1]/10, "convergence en h insuffisante"
+
+
 def test_flambage_console():
     for num_mult in (1, 10):  # 10 : éléments numérotés 10, 20, 30... (numérotation non consécutive)
         pb = probleme_poutre(6, forces=[[7, 1, -1.0]], num_mult=num_mult)
