@@ -44,14 +44,15 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
     - x et y : coordonnées
     - u et v, u1 et u2, theta: degrés de liberté dans les axes locaux et dans les axes structure
     - position : indice dans la liste 'nodes_global' des noeuds construite initialement
-    - px, py : efforts répartis définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2) (0 sinon)
+    - p1, p2 : efforts répartis définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2) (0 sinon)
     
 - **Classe Elem** = Eléments contenant :
     - numero
     - inode1 et inode2 : numéro des noeuds : ATTENTION l'orientation de l'élément dépend de l'ordre des noeuds
     - angle et longueur : caractéristiques géométriques
     - ES, EI, Smasse : caractéristiques physiques
-    - px et py : chargements linéiques orientés dans le REPERE LOCAL de la poutre (orientation !); 0 si définis aux noeuds
+    - px et py : chargements linéiques constants orientés dans le REPERE LOCAL de la poutre (orientation !);
+      ils s'ajoutent aux charges (p1, p2) éventuellement définies aux noeuds dans le repère de structure
     - grandeurs élémentaires (raideur initiale, raideur géométrique, masse, seconds membres)
     
     *Méthodes* = construction d'un élément avec calcul de ses grandeurs; mises à jour si changement propriétés et/ou pré-charge flambage, destruction
@@ -173,15 +174,15 @@ class Node:
     .. attribute:: theta : float 
     
         ddl rotation    
-    .. attribute:: px, py : float 
+    .. attribute:: p1, p2 : float 
   
-        px, py : efforts répartis définis aux noeuds, dans le repère de structure (x1, x2) (0 sinon)         
+        p1, p2 : efforts répartis définis au noeud, composantes selon x1 et x2 dans le REPERE DE STRUCTURE (0 sinon)         
 
     .. attribute:: position : int 
     
         position du noeud dans la liste des noeuds - utile pour accès aux ddls
     """
-    def __init__(self, numero, position, x1, x2, px=0, py=0, u=0, v=0, u1=0, u2=0, theta=0):
+    def __init__(self, numero, position, x1, x2, p1=0, p2=0, u=0, v=0, u1=0, u2=0, theta=0):
         self.numero = numero
         self.position = position
         self.x1 = x1
@@ -191,11 +192,11 @@ class Node:
         self.u1 = u1 # dans le repère globa  
         self.u2 = u2      
         self.theta = theta
-        self.px = px # dans le repère de structure (projetés dans le repère local par Elem)
-        self.py = py
+        self.p1 = p1 # charge répartie selon x1, dans le REPERE DE STRUCTURE
+        self.p2 = p2 # charge répartie selon x2, dans le REPERE DE STRUCTURE
 
     def __str__(self):
-        return f"Noeud {self.numero}, x1 = {self.x1:2f}, x2 = {self.x2:2f}, \n px = {self.px}, py = {self.py}, \n u = {self.u:2f}, v = {self.v:2f}, \n u1 = {self.u1:2f}, u2 = {self.u2:2f}, \n theta = {self.theta}, \n position = {self.position}"
+        return f"Noeud {self.numero}, x1 = {self.x1:2f}, x2 = {self.x2:2f}, \n p1 = {self.p1}, p2 = {self.p2}, \n u = {self.u:2f}, v = {self.v:2f}, \n u1 = {self.u1:2f}, u2 = {self.u2:2f}, \n theta = {self.theta}, \n position = {self.position}"
 
 
 def Renvoi_index_node(n_node, liste):
@@ -237,13 +238,23 @@ def calcul_fe(C, S, le, px, py ):
     # SD, 28/10/2025: f_e(g)=R*f_e(l) et pas R^T*f_e(l) => f_e/x1=C*px-S*py, f_e/x2=S*px+S*py 
     return (le/2) * np.array([px*C-py*S, px*S+py*C, py*le/6, px*C-py*S, px*S+py*C, -py*le/6])
 
+def projection_locale(C, S, p_noeuds):
+    """ Projette dans le repère local de l'élément les charges réparties définies aux 2 noeuds dans le repère de structure :
+    p_noeuds = [p1_noeud1, p2_noeud1, p1_noeud2, p2_noeud2]  ->  [px1, py1, px2, py2] = R^T p
+    
+    .. attribute :: pxpy : np.array(4)
+    """
+    p1a, p2a, p1b, p2b = p_noeuds
+    return np.array([C*p1a + S*p2a, -S*p1a + C*p2a, C*p1b + S*p2b, -S*p1b + C*p2b])
+
 # SD 31/10/2025 : calcul second membre avec effort répartis définis aux noeuds pxpy = px1,py1,px2,py2
 def calcul_fe_nodes(C, S, le, pxpy ):
-    """ Second membre des efforts répartis définis aux noeuds de l'élément dans le repère local, recalculé avec changement de base dans repère de structure
+    """ Second membre des efforts répartis à variation linéaire, dont les valeurs aux 2 noeuds de l'élément
+    pxpy = [px1, py1, px2, py2] sont données dans le REPERE LOCAL (cf. projection_locale), 
+    recalculé avec changement de base dans repère de structure
     
     .. attribute :: fe : np.array(6)
     """
-    # SD 31/10/2025 : si définis dans repère local
     px1 = pxpy[0]
     py1 = pxpy[1]
     px2 = pxpy[2]
@@ -311,7 +322,8 @@ class Elem:
         contient dans l'ordre ES, EI, Smasse (masse section)
     .. attribute:: px_py : np.array(2) 
     
-        efforts linéiques, longitudinal et transverse ; si nuls, alors on teste si efforts répartis définis aux noeuds (dans repère de structure) 
+        efforts linéiques constants, longitudinal et transverse, dans le REPERE LOCAL de l'élément ; 
+        ils s'ajoutent aux efforts répartis (p1, p2) éventuellement définis aux noeuds dans le REPERE DE STRUCTURE
     .. attribute:: nodes_global : list 
     
         list contenant les noeuds du problème global (création des noeuds)        
@@ -359,7 +371,6 @@ class Elem:
         # Récupère les 2 objets Node dont les numéros sont connus
         self.node1 = nodes_global[Renvoi_index_node(inode1, nodes_global)]
         self.node2 = nodes_global[Renvoi_index_node(inode2, nodes_global)]
-        p1p2 = np.array([self.node1.px , self.node1.py , self.node2.px , self.node2.py ])
 
         
         # Calculer la longueur et l'angle des éléments connaissant les noeuds
@@ -382,30 +393,46 @@ class Elem:
         #              +-----------> x1
         # global C, S
   
-        # L'angle est défini par l'ordre des noeuds (noeud 1 -> noeud 2) : t = (C, S)
-        # arctan2 donne directement l'angle dans ]-pi, pi], quel que soit le quadrant
-        if le < 1E-13:
-            raise ValueError(f"L'élément {num_elem} est de longueur nulle (noeuds {inode1} et {inode2} confondus)")
-        self.C = (x2_1 - x1_1) / le
-        self.S = (x2_2 - x1_2) / le
-        self.angle = np.arctan2(self.S, self.C)
+        # Ne pas regarder le signe de l'angle, le laisser défini par l'ordre des noeuds
+        # (self.C, self.S) = (1., 0.)     
+        # if np.abs(x2_2 - x1_2) > 1E-13 : # angle par rapport à l'horizontal x1
+        #     if np.abs(x2_1 - x1_1) > 1E-13:
+        #         self.C = ( (x2_1 - x1_1) / le)
+        #         self.S = ( (x2_2 - x1_2) / le )                
+        #         self.angle = np.arctan( self.S / self.C )
+        #         if ((self.C*self.S > 0) and (self.C<0)):
+        #             self.angle += np.pi
+        #         elif ((self.C*self.S <0) and (self.C<0)):
+        #             self.angle += np.pi
+        #     else :
+        #         (self.C, self.S) = (0, 1)
+        #         self.angle = np.pi/2
+                
+        (self.C, self.S) = (1., 0.)     
+        if np.abs(x2_2 - x1_2) < 1E-13 : # aligne sur x1
+            self.C = 1 * np.sign(x2_1 - x1_1)
+            if x2_1 > x1_1 :
+                self.angle = 0
+            else :
+                self.angle = np.pi
+#np.sign renvoie 0 si qtité nulle
+        elif np.abs(x2_1 - x1_1) < 1E-13: # aligne sur x2
+            (self.C, self.S) = (0, 1 * np.sign(x2_2 - x1_2))
+            self.angle = np.pi/2 * np.sign(x2_2 - x1_2)
+        else :
+            self.C = ( (x2_1 - x1_1) / le)
+            self.S = ( (x2_2 - x1_2) / le )                
+            self.angle = np.arctan( self.S / self.C )
+            if ((self.C*self.S > 0) and (self.C<0)):
+                self.angle += np.pi
+            elif ((self.C*self.S <0) and (self.C<0)):
+                self.angle += np.pi
                 
         alpha = ES / le
         beta = EI / le**3
         
         self.kel_e = calcul_kel(alpha, beta, self.C, self.S, le )
-        # SD : 2 façons de calculer le second membre à partir des efforts dans le repère local : 
-        # (px,py) par élément ou (px_i,py_i) aux noeuds à projeter dans le repère llobal
-        if (px_py[0] != 0 or px_py[1] != 0) :
-            self.f_e = calcul_fe(self.C, self.S, le, self.px, self.py )
-        elif np.count_nonzero(p1p2) > 0: # A VERIFIER
-            # projection dans repère global
-            pxpy = np.array([self.C*p1p2[0] + self.S*p1p2[1], self.C*p1p2[1] - self.S*p1p2[0],
-                             self.C*p1p2[2] + self.S*p1p2[3], self.C*p1p2[3] - self.S*p1p2[2]
-                             ])
-            self.f_e = calcul_fe_nodes(self.C, self.S, le, pxpy )
-        else :
-            self.f_e = np.zeros(6)
+        self.mise_a_jour_fe()
             
         self.kg_e = calcul_kg(self.C, self.S, le, self.def_eff[2])
         self.M_e = calcul_M(self.Smasse,self.C, self.S, le)
@@ -417,8 +444,17 @@ class Elem:
         self.kel_e = calcul_kel(alpha, beta, self.C, self.S, self.le)
 
     def mise_a_jour_fe(self):
-        """ Si propriétés changent(angle, longueur, chargement)"""
-        self.f_e = calcul_fe(self.C, self.S, self.le, self.px, self.py )
+        """ Second membre élémentaire (repère de structure) ; à rappeler si propriétés changent (angle, longueur, chargement).
+        Somme (superposition) de 2 contributions :
+            - (px, py) constants sur l'élément, dans le REPERE LOCAL de l'élément
+            - (p1, p2) définis aux noeuds dans le REPERE DE STRUCTURE, à variation linéaire sur l'élément
+        """
+        self.f_e = np.zeros(6)
+        if self.px != 0 or self.py != 0:
+            self.f_e += calcul_fe(self.C, self.S, self.le, self.px, self.py)
+        p_noeuds = np.array([self.node1.p1, self.node1.p2, self.node2.p1, self.node2.p2])
+        if np.count_nonzero(p_noeuds) > 0:
+            self.f_e += calcul_fe_nodes(self.C, self.S, self.le, projection_locale(self.C, self.S, p_noeuds))
         
     def mise_a_jour_kg(self):
         """ Si propriétés et/ou effort normal changent (angle, longueur, effort)"""
@@ -505,7 +541,7 @@ def Renvoi_index_elem(n_elem, liste):
 
 def fonct_Maille_depuis_Fichier(nomfic_noeuds, nomfic_elements):
     """
-Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes ou 5 colonnes : num_noeud, x, y + éventuellement px, py dans le repère de structure x1, x2) et 
+Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes ou 5 colonnes : num_noeud, x1, x2 + éventuellement p1, p2 charges réparties dans le REPERE DE STRUCTURE) et 
 les connectivités (3 colonnes : num_elem, noeud1, noeud2)
 
 *Retourne :* la liste des noeuds 'nodes_global' et la connectivité des éléments 'nodes_elem'
@@ -579,8 +615,9 @@ Création d'un élement et intégration de sa raideur élastique, sa matrice de 
         liste globale des éléments
     pptes_meca : np.array(3)
         EI, ES, et Smasse
-    px, py : float
-        Charges linéiques longitudinale et transverse dans le repère de l'élément (orientation donnée par l'ordre des noeuds)
+    px_py : (float, float)
+        Charges linéiques constantes longitudinale et transverse dans le REPERE LOCAL de l'élément (orientation donnée par l'ordre des noeuds) ;
+        elles s'ajoutent aux charges (p1, p2) éventuellement définies aux noeuds dans le repère de structure
 
 *Retourne*
 

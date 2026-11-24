@@ -24,11 +24,16 @@ ES, EI, m = E*b*h, E*b*h**3/12, rho*b*h
 ENCASTREMENT = [[1, 1, 0], [1, 2, 0], [1, 3, 0]]
 
 
-def probleme_poutre(n_elem, forces=(), deplacements=ENCASTREMENT, angle=0.0, num_mult=1, px_py=(0., 0.)):
-    """Poutre de longueur L maillée avec n_elem éléments (numérotés num_mult*k), CL appliquées."""
+def probleme_poutre(n_elem, forces=(), deplacements=ENCASTREMENT, angle=0.0, num_mult=1,
+                    px_py_local=(0., 0.), p1_p2_noeuds=(0., 0.)):
+    """Poutre de longueur L maillée avec n_elem éléments (numérotés num_mult*k), CL appliquées.
+    px_py_local  : charge répartie constante par élément, dans le REPERE LOCAL
+    p1_p2_noeuds : charge répartie (identique à tous les noeuds), dans le REPERE DE STRUCTURE"""
     nodes, conn = Cl.fonct_Maille_Poutre(L, n_elem, angle)
+    for nd in nodes:
+        nd.p1, nd.p2 = p1_p2_noeuds
     conn = [[num_mult*c[0], c[1], c[2]] for c in conn]
-    props = [np.repeat([[ES, EI, m]], n_elem, 0), np.repeat([px_py], n_elem, 0)]
+    props = [np.repeat([[ES, EI, m]], n_elem, 0), np.repeat([px_py_local], n_elem, 0)]
     pb = Cl.pbEF_poutre(nodes, conn, props)
     pb.Maillage_Assemblage()
     pb.CL_forces = [list(f) for f in forces]
@@ -79,7 +84,7 @@ def test_console_effort_bout():
 
 def test_console_charge_repartie():
     q = -2e3
-    pb = probleme_poutre(4, px_py=(0., q))
+    pb = probleme_poutre(4, px_py_local=(0., q))
     pb.Resol()
     verifie("console charge répartie : flèche qL^4/8EI", pb.nodes_global[-1].u2, q*L**4/(8*EI), 1e-9)
     R = pb.Calcul_Reactions()
@@ -92,12 +97,61 @@ def test_charge_repartie_aux_noeuds():
     q, n_elem = -3e3, 4
     nodes, conn = Cl.fonct_Maille_Poutre(L, n_elem, 0.0)
     for nd in nodes:
-        nd.py = q * nd.x1 / L
+        nd.p2 = q * nd.x1 / L
     pb = Cl.pbEF_poutre(nodes, conn, [np.repeat([[ES, EI, m]], n_elem, 0), np.zeros((n_elem, 2))])
     pb.Maillage_Assemblage()
     pb.CL_deplacements = ENCASTREMENT
     pb.Application_CL(); pb.Resol()
     verifie("charge triangulaire aux noeuds : flèche 11qL^4/120EI", pb.nodes_global[-1].u2, 11*q*L**4/(120*EI), 1e-9)
+
+
+ANGLES_CONSOLE = (0.0, np.pi/6, 2*np.pi/3, -np.pi/4, np.pi + np.pi/6)  # le dernier : poutre parcourue vers x1 < 0
+
+
+def resultats_console(pb):
+    """Grandeurs comparées entre deux mises en données d'un même problème."""
+    pb.Resol(); pb.Calcul_Def_Eff()
+    return {"F_rep": pb.F_rep.copy(),
+            "déplacements": pb.dofs.copy(),
+            "réactions": pb.Calcul_Reactions().copy(),
+            "N, T, M": np.array([e.def_eff[2:5] for e in pb.elem_global])}
+
+
+def compare(nom, A, B, tol=1e-12):
+    ecart = np.abs(A - B).max() / np.abs(A).max()
+    print(f"  {nom:<55s} écart max relatif = {ecart:.1e}")
+    assert ecart < tol, f"{nom} : écart {ecart:.2e} > {tol:.0e}"
+
+
+def test_charges_reparties_noeuds_vs_element():
+    """Console inclinée d'un angle theta sous charge répartie constante (px, py) :
+    cas A : (px, py) définis par élément dans le REPERE LOCAL ;
+    cas B : même charge définie aux noeuds dans le REPERE DE STRUCTURE, (p1, p2) = R (px, py).
+    Les deux mises en données doivent donner exactement les mêmes résultats,
+    et la solution analytique de la console dans le repère local."""
+    px, py, n_elem = 1.5e3, -2e3, 4
+    for theta in ANGLES_CONSOLE:
+        C, S = np.cos(theta), np.sin(theta)
+        deg = f"{np.degrees(theta):.0f}°"
+        A = resultats_console(probleme_poutre(n_elem, angle=theta, px_py_local=(px, py)))
+        B = resultats_console(probleme_poutre(n_elem, angle=theta, p1_p2_noeuds=(C*px - S*py, S*px + C*py)))
+        for cle in A:
+            compare(f"angle {deg} : {cle} élément / noeuds", A[cle], B[cle])
+        u1, u2 = B["déplacements"][-3:-1]
+        verifie(f"angle {deg} : allongement px L^2/2ES", C*u1 + S*u2, px*L**2/(2*ES), 1e-9)
+        verifie(f"angle {deg} : flèche py L^4/8EI", -S*u1 + C*u2, py*L**4/(8*EI), 1e-9)
+
+
+def test_superposition_charges_element_et_noeuds():
+    """La moitié de la charge par élément (repère local) + l'autre moitié aux noeuds (repère de structure)
+    doit donner le même résultat que la charge complète définie par élément."""
+    px, py, theta = 1.5e3, -2e3, np.pi/6
+    C, S = np.cos(theta), np.sin(theta)
+    A = resultats_console(probleme_poutre(4, angle=theta, px_py_local=(px, py)))
+    B = resultats_console(probleme_poutre(4, angle=theta, px_py_local=(px/2, py/2),
+                                          p1_p2_noeuds=((C*px - S*py)/2, (S*px + C*py)/2)))
+    for cle in A:
+        compare(f"superposition élément + noeuds : {cle}", A[cle], B[cle])
 
 
 def test_deplacement_impose_et_efforts():
