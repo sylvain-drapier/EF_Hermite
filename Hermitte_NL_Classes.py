@@ -49,7 +49,7 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
 - **Classe Elem** = Eléments contenant :
     - numero
     - inode1 et inode2 : numéro des noeuds : ATTENTION l'orientation de l'élément dépend de l'ordre des noeuds
-    - angle et longueur : caractéristiques géométriques
+    - angle (en DEGRES, dans ]-180, 180], par rapport à x1) et longueur : caractéristiques géométriques
     - ES, EI, Smasse : caractéristiques physiques
     - px et py : chargements linéiques constants orientés dans le REPERE LOCAL de la poutre (orientation !);
       ils s'ajoutent aux charges (p1, p2) éventuellement définies aux noeuds dans le repère de structure
@@ -329,7 +329,8 @@ class Elem:
         list contenant les noeuds du problème global (création des noeuds)        
     .. attribute:: angle : float [= 0]
     
-        angle de l'élément par rapport à l'axe x_1
+        angle de l'élément par rapport à l'axe x_1, en DEGRES, dans ]-180, 180] ; calculé à partir des coordonnées des noeuds
+        (orientation noeud 1 -> noeud 2)
     .. attribute:: le : float [= 0]
     
         longueur élémentaire   
@@ -411,22 +412,14 @@ class Elem:
         (self.C, self.S) = (1., 0.)     
         if np.abs(x2_2 - x1_2) < 1E-13 : # aligne sur x1
             self.C = 1 * np.sign(x2_1 - x1_1)
-            if x2_1 > x1_1 :
-                self.angle = 0
-            else :
-                self.angle = np.pi
 #np.sign renvoie 0 si qtité nulle
         elif np.abs(x2_1 - x1_1) < 1E-13: # aligne sur x2
             (self.C, self.S) = (0, 1 * np.sign(x2_2 - x1_2))
-            self.angle = np.pi/2 * np.sign(x2_2 - x1_2)
         else :
             self.C = ( (x2_1 - x1_1) / le)
             self.S = ( (x2_2 - x1_2) / le )                
-            self.angle = np.arctan( self.S / self.C )
-            if ((self.C*self.S > 0) and (self.C<0)):
-                self.angle += np.pi
-            elif ((self.C*self.S <0) and (self.C<0)):
-                self.angle += np.pi
+        # angle en DEGRES dans ]-180, 180] (exact : 0, 180, +/-90 pour les éléments alignés sur les axes)
+        self.angle = np.degrees(np.arctan2(self.S, self.C))
                 
         alpha = ES / le
         beta = EI / le**3
@@ -466,7 +459,7 @@ class Elem:
 
         
     def __str__(self):
-        return f"Elément{self.num_elem} \n {self.node1} \n {self.node2} \n \n angle = {self.angle*180/np.pi} degrès, \n longueur = {self.le}, \n ES = {self.ES}, EI = {self.EI}, \n Smasse = {self.Smasse}, \n px_const = {self.px}, py_const = {self.py} "
+        return f"Elément{self.num_elem} \n {self.node1} \n {self.node2} \n \n angle = {self.angle} degrés, \n longueur = {self.le}, \n ES = {self.ES}, EI = {self.EI}, \n Smasse = {self.Smasse}, \n px_const = {self.px}, py_const = {self.py} "
 
 
 """
@@ -988,7 +981,7 @@ Prise en compte des conditions de Neumann et Dirichlet homogènes / non-homogèn
 
 def fonct_Maille_Poutre(lp, Nl , angle):
     """
-Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un angle par rapport à x_1 
+Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un angle (en DEGRES) par rapport à x_1 
 
 *Retourne :* la liste des noeuds et la liste des connectivités initialisées
 
@@ -999,8 +992,8 @@ Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un 
     
     Dl = lp / Nl
     for i in range(Nl+1):
-        xn = i*Dl*np.cos(angle)
-        yn = i*Dl*np.sin(angle)
+        xn = i*Dl*np.cos(np.radians(angle))
+        yn = i*Dl*np.sin(np.radians(angle))
         nodes_global.append(Node(i+1,i,xn,yn))
 
     for i in range(Nl):        
@@ -1036,7 +1029,7 @@ Pour tous les éléments, calcul les déformations et contraintes généralisée
         # inode2 = Elem_temp.node2.numero
         le = Elem_temp.le
         
-        (C, S) = (np.cos(Elem_temp.angle), np.sin(Elem_temp.angle))
+        (C, S) = (Elem_temp.C, Elem_temp.S)
               
         # déplacements (u,v) aux noeuds dans le repère local : u=u1C+u2S, v=-u1S+u2C
         elem_global[ind_elem].node1.u = Elem_temp.node1.u1*C + Elem_temp.node1.u2*S

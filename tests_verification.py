@@ -58,6 +58,16 @@ def test_matrices_elementaires_symetriques():
     print("  kel, kg, M symétriques")
 
 
+def test_angle_elements_en_degres():
+    """Angle des éléments calculé en degrés dans ]-180, 180], selon l'orientation noeud 1 -> noeud 2."""
+    for angle, attendu in [(0, 0), (30, 30), (90, 90), (120, 120), (180, 180), (210, -150), (-90, -90), (-45, -45)]:
+        pb = probleme_poutre(2, angle=angle)
+        for e in pb.elem_global:
+            assert abs(e.angle - attendu) < 1e-9, f"angle {e.angle} au lieu de {attendu}"
+            assert abs(e.C - np.cos(np.radians(attendu))) < 1e-12 and abs(e.S - np.sin(np.radians(attendu))) < 1e-12
+    print("  angles des éléments en degrés, dans ]-180, 180]")
+
+
 def test_mouvements_de_corps_rigide():
     """K * (translation ou rotation rigide) = 0 pour un élément incliné."""
     th, le = 0.7, 0.3
@@ -73,13 +83,14 @@ def test_mouvements_de_corps_rigide():
 # ------------------------------------------------------------------ statique
 def test_console_effort_bout():
     P = -1e3
-    for angle in (0.0, np.pi/3):
-        pb = probleme_poutre(4, forces=[[5, 1, -P*np.sin(angle)], [5, 2, P*np.cos(angle)]], angle=angle)
+    for angle in (0.0, 60.0):  # degrés
+        C, S = np.cos(np.radians(angle)), np.sin(np.radians(angle))
+        pb = probleme_poutre(4, forces=[[5, 1, -P*S], [5, 2, P*C]], angle=angle)
         pb.Resol()
         n = pb.nodes_global[-1]
-        fleche = -n.u1*np.sin(angle) + n.u2*np.cos(angle)
-        verifie(f"console : flèche PL^3/3EI (angle {np.degrees(angle):.0f}°)", fleche, P*L**3/(3*EI), 1e-9)
-        verifie(f"console : rotation PL^2/2EI (angle {np.degrees(angle):.0f}°)", n.theta, P*L**2/(2*EI), 1e-9)
+        fleche = -n.u1*S + n.u2*C
+        verifie(f"console : flèche PL^3/3EI (angle {angle:.0f}°)", fleche, P*L**3/(3*EI), 1e-9)
+        verifie(f"console : rotation PL^2/2EI (angle {angle:.0f}°)", n.theta, P*L**2/(2*EI), 1e-9)
 
 
 def test_console_charge_repartie():
@@ -105,7 +116,7 @@ def test_charge_repartie_aux_noeuds():
     verifie("charge triangulaire aux noeuds : flèche 11qL^4/120EI", pb.nodes_global[-1].u2, 11*q*L**4/(120*EI), 1e-9)
 
 
-ANGLES_CONSOLE = (0.0, np.pi/6, 2*np.pi/3, -np.pi/4, np.pi + np.pi/6)  # le dernier : poutre parcourue vers x1 < 0
+ANGLES_CONSOLE = (0.0, 30.0, 120.0, -45.0, 210.0)  # degrés ; 210° : poutre parcourue vers x1 < 0
 
 
 def resultats_console(pb):
@@ -124,15 +135,15 @@ def compare(nom, A, B, tol=1e-12):
 
 
 def test_charges_reparties_noeuds_vs_element():
-    """Console inclinée d'un angle theta sous charge répartie constante (px, py) :
+    """Console inclinée d'un angle theta (degrés) sous charge répartie constante (px, py) :
     cas A : (px, py) définis par élément dans le REPERE LOCAL ;
     cas B : même charge définie aux noeuds dans le REPERE DE STRUCTURE, (p1, p2) = R (px, py).
     Les deux mises en données doivent donner exactement les mêmes résultats,
     et la solution analytique de la console dans le repère local."""
     px, py, n_elem = 1.5e3, -2e3, 4
     for theta in ANGLES_CONSOLE:
-        C, S = np.cos(theta), np.sin(theta)
-        deg = f"{np.degrees(theta):.0f}°"
+        C, S = np.cos(np.radians(theta)), np.sin(np.radians(theta))
+        deg = f"{theta:.0f}°"
         A = resultats_console(probleme_poutre(n_elem, angle=theta, px_py_local=(px, py)))
         B = resultats_console(probleme_poutre(n_elem, angle=theta, p1_p2_noeuds=(C*px - S*py, S*px + C*py)))
         for cle in A:
@@ -145,8 +156,8 @@ def test_charges_reparties_noeuds_vs_element():
 def test_superposition_charges_element_et_noeuds():
     """La moitié de la charge par élément (repère local) + l'autre moitié aux noeuds (repère de structure)
     doit donner le même résultat que la charge complète définie par élément."""
-    px, py, theta = 1.5e3, -2e3, np.pi/6
-    C, S = np.cos(theta), np.sin(theta)
+    px, py, theta = 1.5e3, -2e3, 30.0
+    C, S = np.cos(np.radians(theta)), np.sin(np.radians(theta))
     A = resultats_console(probleme_poutre(4, angle=theta, px_py_local=(px, py)))
     B = resultats_console(probleme_poutre(4, angle=theta, px_py_local=(px/2, py/2),
                                           p1_p2_noeuds=((C*px - S*py)/2, (S*px + C*py)/2)))

@@ -36,7 +36,7 @@ nodes_elem = []
 longueur = 2.
 Nl = 10
 angle = 0.
-# Fonction de Maillage d'une poutre droite de longueur donnée, avec Nl élements et formant un angle avec l'horizontale
+# Fonction de Maillage d'une poutre droite de longueur donnée, avec Nl élements et formant un angle avec l'horizontale  (angle en degrés)
 # nodes_global, nodes_elem = Cl.fonct_Maille_Poutre(longueur, Nl, angle)
 # nodes_global, nodes_elem = Cl.fonct_Maille_Poutre(longueur, Nl, 0)
 
