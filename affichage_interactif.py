@@ -13,6 +13,9 @@ Utilisation dans un notebook ::
     AI.vue(pb)                      # statique : choix du champ, survol des valeurs
     AI.vue_modes(pb)                # flambage / vibration : choix du mode + animation
     AI.compare([pb2, pb4, pb8], ['2 élts', '4 élts', '8 élts'], mode=1)
+    AI.tableau_noeuds(pb).show()    # ddls et réactions aux noeuds
+    AI.tableau_elements(pb).show()  # géométrie, charges et efforts internes des éléments
+    AI.tableau_valeurs_propres([pb0, pb1], ['initial', 'modifié']).show()
 
 Sans ipywidgets, les fonctions ``figure``, ``figure_mode`` et ``compare`` renvoient
 des figures Plotly utilisables seules (``fig.show()``, ``fig.write_html(...)``).
@@ -32,6 +35,8 @@ Les champs le long de l'élément s'en déduisent (convention du code) :
     N = ES du/dx (constant),  M = EI d2v/dx2 (linéaire),  T = -dM/dx (constant),  K = d2v/dx2.
 """
 
+import copy
+
 import numpy as np
 import plotly.graph_objects as go
 from plotly.colors import sample_colorscale, qualitative
@@ -41,6 +46,10 @@ try:
     from IPython.display import display
 except ImportError:  # le module reste utilisable sans ipywidgets (figures seules)
     W = None
+    import warnings
+    warnings.warn("ipywidgets non installé : vue() et vue_modes() affichent une figure fixe "
+                  "(mode 1 pour vue_modes), sans contrôles. Installer : pip install 'ipywidgets>=8'",
+                  stacklevel=2)
 
 # clé : (libellé, unité, échelle de couleur divergente centrée sur 0 ?)
 CHAMPS = {
@@ -278,7 +287,8 @@ def figure(pb, champ='u', q=None, ampli=None, hermite=True, representation='coul
             pointe = Xh['X'] + s*np.outer(ch[champ], Xh['n'])
             poly = np.vstack([Xh['X'], pointe[::-1], Xh['X'][:1]])
             moy = ch[champ].mean()
-            coul = sample_colorscale(echelle, [(moy - cmin)/(cmax - cmin)])[0]
+            # np.clip : pour un champ constant (N, T), la moyenne arrondie peut dépasser cmax de 1 ulp
+            coul = sample_colorscale(echelle, [float(np.clip((moy - cmin)/(cmax - cmin), 0, 1))])[0]
             fig.add_trace(go.Scatter(x=poly[:, 0], y=poly[:, 1], mode='lines', fill='toself',
                                      fillcolor=coul.replace('rgb', 'rgba').replace(')', ',0.45)'),
                                      line=dict(color=coul, width=1), hoverinfo='skip', showlegend=False))
@@ -443,10 +453,77 @@ def compare(liste_pb, noms=None, mode=None, hermite=True, ampli=None, n_pts=15, 
 
 
 # =====================================================================================
+#                                  TABLEAUX
+# =====================================================================================
+def _tableau(entetes, colonnes, titre, formats):
+    """Tableau Plotly (défilement intégré au-delà d'une vingtaine de lignes)."""
+    n = len(colonnes[0]) if colonnes else 0
+    cellules = [[(f if isinstance(v, (int, float, np.floating, np.integer)) else '{}').format(v)
+                 for v in col] for col, f in zip(colonnes, formats)]
+    fig = go.Figure(go.Table(
+        header=dict(values=[f"<b>{e}</b>" for e in entetes], fill_color='#dfe6ee', align='center'),
+        cells=dict(values=cellules, align='right', height=24,
+                   fill_color=[['white', '#f5f7fa']*(n//2 + 1)])))
+    fig.update_layout(title=dict(text=titre, x=0.5), margin=dict(l=10, r=10, t=50, b=10),
+                      height=min(110 + 26*n, 620))
+    return fig
+
+
+def tableau_noeuds(pb, titre="Noeuds : déplacements et réactions (repère de structure)"):
+    """Tableau des noeuds : coordonnées, ddls (u1, u2, theta) et réactions (R1, R2, Mr).
+    Les réactions sont celles de pb.reactions (nulles tant que pb.Calcul_Reactions() n'a pas été appelé)."""
+    q = ddls_noeuds(pb)
+    R = np.asarray(pb.reactions, dtype=float).reshape(-1, 3) if len(pb.reactions) else np.zeros_like(q)
+    cols = [[n.numero for n in pb.nodes_global], [n.x1 for n in pb.nodes_global], [n.x2 for n in pb.nodes_global],
+            q[:, 0], q[:, 1], q[:, 2], R[:, 0], R[:, 1], R[:, 2]]
+    return _tableau(['Noeud', 'x1', 'x2', 'u1', 'u2', 'θ', 'R1', 'R2', 'Mr'], cols, titre,
+                    ['{:d}', '{:.4g}', '{:.4g}'] + ['{:.4e}']*6)
+
+
+def tableau_elements(pb, titre="Éléments : géométrie, charges réparties (repère local) et efforts internes"):
+    """Tableau des éléments : noeuds, angle (degrés), longueur, (px, py) locaux, N, T, M au milieu de l'élément.
+    Les efforts sont ceux de pb.Calcul_Def_Eff() (convention du code : M = EI v'', T = -dM/dx)."""
+    E = pb.elem_global
+    cols = [[e.num_elem for e in E], [f"{e.node1.numero} → {e.node2.numero}" for e in E],
+            [e.angle for e in E], [e.le for e in E], [e.px for e in E], [e.py for e in E],
+            [e.def_eff[2] for e in E], [e.def_eff[3] for e in E], [e.def_eff[4] for e in E]]
+    return _tableau(['Élément', 'Noeuds', 'Angle (°)', 'Longueur', 'px', 'py', 'N', 'T', 'M (milieu)'], cols, titre,
+                    ['{:d}', '{}', '{:.2f}', '{:.4g}', '{:.3g}', '{:.3g}', '{:.4e}', '{:.4e}', '{:.4e}'])
+
+
+def tableau_valeurs_propres(liste_pb, noms=None, reference=None, nom_reference='Référence', titre=None):
+    """Valeurs propres (pulsations en rad/s ou multiplicateurs de flambage) de un ou plusieurs problèmes,
+    mode par mode. reference : liste de valeurs (analytiques...) ajoutée en dernière colonne, avec
+    l'écart relatif du premier problème ; à n'utiliser que si elle correspond au même problème."""
+    noms = noms or [f"Problème {i+1}" for i in range(len(liste_pb))]
+    vps = [np.asarray(p.vp_min, dtype=float) for p in liste_pb]
+    n = max(len(v) for v in vps)
+    col = lambda v: [v[k] if k < len(v) else float('nan') for k in range(n)]
+    entetes, cols, fmts = ['Mode'], [list(range(1, n + 1))], ['{:d}']
+    for nom, v in zip(noms, vps):
+        entetes.append(nom); cols.append(col(v)); fmts.append('{:.5e}')
+    if len(vps) == 2:
+        entetes.append(f"{noms[1]} / {noms[0]}")
+        cols.append([b/a if a else float('nan') for a, b in zip(col(vps[0]), col(vps[1]))]); fmts.append('{:.5g}')
+    if reference is not None:
+        ref = col(np.asarray(reference, dtype=float))
+        entetes += [nom_reference, f"Écart {noms[0]}"]
+        cols += [ref, [abs(a - r)/abs(r) if r else float('nan') for a, r in zip(col(vps[0]), ref)]]
+        fmts += ['{:.5e}', '{:.2e}']
+    if titre is None:
+        titre = "Pulsations propres (rad/s)" if liste_pb[0].vibration else "Charges critiques (multiplicateurs du chargement)"
+    return _tableau(entetes, cols, titre, fmts)
+
+
+# =====================================================================================
 #                           VUES INTERACTIVES (ipywidgets)
 # =====================================================================================
-def _sortie(construire, controles):
-    """Affiche les contrôles + la figure, reconstruite à chaque changement."""
+def _sortie(construire, controles, lignes):
+    """Affiche les contrôles (``lignes`` : liste de listes de widgets) + la figure,
+    reconstruite à chaque changement.
+
+    Le widget Output est affiché AVANT le premier tracé : sinon (VS Code notamment)
+    la première figure n'est pas capturée et sort sous la cellule, hors du widget."""
     out = W.Output()
 
     def maj(*_):
@@ -459,19 +536,27 @@ def _sortie(construire, controles):
 
     for c in controles:
         c.observe(maj, names='value')
+    display(W.VBox([W.HBox(l) for l in lignes] + [out]))
     maj()
-    return out
 
 
-def vue(pb, champ='u'):
-    """Vue interactive d'un calcul statique : champ, représentation, amplification, options."""
+def vue(pb, champ='u', ampli=None, representation='couleur'):
+    """Vue interactive d'un calcul statique : champ, représentation, amplification, options.
+
+    ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
+            = 10 % de la taille de la structure) ; réglable ensuite avec le curseur.
+    representation : 'couleur' (champ en couleur sur la déformée) ou 'diagramme' (N, T, M).
+
+    La vue travaille sur une COPIE de pb faite à l'appel : la suite du notebook peut modifier pb
+    (propriétés, nouveau calcul) sans changer ce qu'affichent les contrôles."""
+    pb = copy.deepcopy(pb)
     if W is None:
-        return figure(pb, champ).show()
-    a0 = amplification_auto(pb) or 1.
+        return figure(pb, champ, ampli=ampli, representation=representation).show()
+    a0 = ampli or amplification_auto(pb) or 1.
     w_champ = W.Dropdown(options=[(v[0], k) for k, v in CHAMPS.items()], value=champ,
                          description='Champ')
     w_rep = W.ToggleButtons(options=[('Couleur sur déformée', 'couleur'), ('Diagramme', 'diagramme')],
-                            value='couleur', description='Vue')
+                            value=representation, description='Vue')
     w_amp = W.FloatLogSlider(value=a0, base=10, min=np.log10(a0) - 2, max=np.log10(a0) + 1,
                              step=0.05, description='Amplif.', readout_format='.3g',
                              continuous_update=False, layout=W.Layout(width='420px'))
@@ -480,28 +565,34 @@ def vue(pb, champ='u'):
     w_num = W.Checkbox(value=False, description='Numéros', indent=False)
     w_eff = W.Checkbox(value=True, description='Efforts et appuis', indent=False)
     ctrl = [w_champ, w_rep, w_amp, w_herm, w_mail, w_num, w_eff]
-    out = _sortie(lambda: figure(pb, w_champ.value, ampli=w_amp.value, hermite=w_herm.value,
-                                 representation=w_rep.value, maillage=w_mail.value,
-                                 numeros=w_num.value, efforts=w_eff.value, appuis=w_eff.value), ctrl)
-    display(W.VBox([W.HBox([w_champ, w_rep]), W.HBox([w_amp, w_herm]),
-                    W.HBox([w_mail, w_num, w_eff]), out]))
+    _sortie(lambda: figure(pb, w_champ.value, ampli=w_amp.value, hermite=w_herm.value,
+                           representation=w_rep.value, maillage=w_mail.value,
+                           numeros=w_num.value, efforts=w_eff.value, appuis=w_eff.value), ctrl,
+            [[w_champ, w_rep], [w_amp, w_herm], [w_mail, w_num, w_eff]])
 
 
-def vue_modes(pb):
-    """Vue interactive des modes (flambage ou vibration) : choix du mode, animation dans la figure."""
-    if W is None:
-        return figure_mode(pb, 1).show()
+def vue_modes(pb, mode=1):
+    """Vue interactive des modes (flambage ou vibration) : choix du mode, animation dans la figure.
+
+    mode : rang du mode affiché au départ (1 = premier), comme 'vp' dans pb.Affichage('X', ..., vp).
+
+    La vue travaille sur une COPIE de pb faite à l'appel (cf. vue)."""
+    pb = copy.deepcopy(pb)
     n = len(pb.vp_min)
     if n == 0:
         raise ValueError("Pas de modes : appeler d'abord pb.Calcul_Modes_Propres('Vibration' ou 'Flambage', n)")
+    if not 1 <= mode <= n:
+        raise ValueError(f"mode = {mode} : seuls les modes 1 à {n} ont été calculés")
+    if W is None:
+        return figure_mode(pb, mode).show()
     unite = 'rad/s' if pb.vibration else '×F'
     w_mode = W.Dropdown(options=[(f"Mode {k} : {pb.vp_min[k-1]:.3e} {unite}", k) for k in range(1, n + 1)],
-                        value=1, description='Mode', layout=W.Layout(width='340px'))
+                        value=mode, description='Mode', layout=W.Layout(width='340px'))
     w_amp = W.FloatSlider(value=0.15, min=0.02, max=0.5, step=0.01, description='Amplitude',
                           readout_format='.2f', continuous_update=False)
     w_herm = W.Checkbox(value=True, description="Interpolation d'Hermite", indent=False)
     w_num = W.Checkbox(value=False, description='Numéros', indent=False)
     ctrl = [w_mode, w_amp, w_herm, w_num]
-    out = _sortie(lambda: figure_mode(pb, w_mode.value, hermite=w_herm.value, numeros=w_num.value,
-                                      ampli=w_amp.value), ctrl)
-    display(W.VBox([W.HBox([w_mode, w_amp]), W.HBox([w_herm, w_num]), out]))
+    _sortie(lambda: figure_mode(pb, w_mode.value, hermite=w_herm.value, numeros=w_num.value,
+                                ampli=w_amp.value), ctrl,
+            [[w_mode, w_amp], [w_herm, w_num]])

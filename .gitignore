@@ -9,3 +9,6 @@ __pycache__/
 jupyter
 sauvegarde_*/
 html/.buildinfo
+
+# Exports HTML des figures interactives
+pont_*.html
