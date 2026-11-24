@@ -238,6 +238,35 @@ def test_flambage_console():
         verifie(f"flambage console pi^2EI/4L^2 (numéros x{num_mult})", lam[0], np.pi**2*EI/(4*L**2), 1e-4)
 
 
+def flambage_console_inclinee(angle, n_elem, n_modes=3):
+    """Console inclinée de angle (degrés), comprimée en bout par un effort unitaire selon son axe."""
+    C, S = np.cos(np.radians(angle)), np.sin(np.radians(angle))
+    pb = probleme_poutre(n_elem, forces=[[n_elem + 1, 1, -C], [n_elem + 1, 2, -S]], angle=angle)
+    pb.Resol(); pb.Calcul_Def_Eff(); pb.MAJ_Rigidite_Geom()
+    lam, modes = pb.Calcul_Modes_Propres('Flambage', n_modes)
+    return pb, np.asarray(lam), np.asarray(modes), C, S
+
+
+def test_flambage_console_inclinee():
+    """Console inclinée (15° et autres quadrants) : charges critiques d'Euler (2k-1)^2 pi^2 EI / 4L^2
+    pour les 3 premiers modes, indépendantes de l'orientation ; N = -1 ; modes purement transverses ;
+    convergence en h^4 de la 1re charge critique."""
+    euler = [(2*k - 1)**2*np.pi**2*EI/(4*L**2) for k in (1, 2, 3)]
+    tol = (1e-5, 2e-4, 1e-3)  # 10 éléments : les modes plus ondulés convergent moins vite
+    for angle in (15.0, 105.0, 195.0, -75.0):
+        pb, lam, modes, C, S = flambage_console_inclinee(angle, 10)
+        N = np.array([e.def_eff[2] for e in pb.elem_global])
+        assert np.abs(N + 1).max() < 1e-9, f"angle {angle}° : N = {N} au lieu de -1"
+        for k in range(3):
+            verifie(f"flambage console inclinée {angle:.0f}° : mode {k+1} (Euler)", lam[k], euler[k], tol[k])
+        q = (modes[:, 0] if modes.ndim == 2 else modes[0]).reshape(-1, 3)
+        axial, transverse = np.abs(q[:, 0]*C + q[:, 1]*S).max(), np.abs(-q[:, 0]*S + q[:, 1]*C).max()
+        assert axial < 1e-10*transverse, f"angle {angle}° : 1er mode non transverse ({axial/transverse:.1e})"
+    ecarts = [abs(flambage_console_inclinee(15.0, n, 1)[1][0] - euler[0])/euler[0] for n in (2, 4, 8)]
+    print(f"  flambage console inclinée 15° : écarts mode 1 pour 2/4/8 élts = {ecarts[0]:.1e} / {ecarts[1]:.1e} / {ecarts[2]:.1e}")
+    assert ecarts[1] < ecarts[0]/10 and ecarts[2] < ecarts[1]/10, "convergence en h insuffisante"
+
+
 # ------------------------------------------------------------------ erreurs de mise en données
 def test_erreurs_lisibles():
     nodes, conn = Cl.fonct_Maille_Poutre(L, 2, 0.0)
