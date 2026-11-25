@@ -5,18 +5,19 @@
     
         classDiagram
           class Elem {
-            C : float, int
+            C
             EI
             ES
             M_e : list
-            S : float
+            S
             Smasse
             angle : int
             def_eff : ndarray
-            f_e : list
+            f_e : list, ndarray
             kel_e : list, ndarray
             kg_e : list
             le : int
+            masse_elem
             node1
             node2
             num_elem
@@ -29,6 +30,8 @@
           }
           class Node {
             numero
+            p1 : int
+            p2 : int
             position
             theta : int
             u : int
@@ -38,52 +41,40 @@
             x1
             x2
           }
-          class denominator {
-          }
-          class imag {
-          }
-          class numerator {
-          }
-          class object {
-          }
           class pbEF_poutre {
+            CL_deplacements : list
+            CL_forces : list
             F_con : ndarray
             F_rep : ndarray
             F_tot : ndarray
+            F_tot_copie : ndarray
             K_global : ndarray
+            K_global_copie : ndarray
             Kgeom_global : ndarray
             M_global : ndarray
+            dofs : ndarray
             elem_global : list
             fixed_dofs : list
+            liste_dofs_imposes : list
             mode_min : list
             nb_nodes
             nodes_elem
             nodes_global
+            penalite : float
             props_elem
+            reactions : ndarray
             total_dofs
             vibration : bool
             vp_min : list
             Affichage(mot_clef, colormap, vp)
-            Application_CL(forces, deplacements)
+            Application_CL(signe_penalite)
             Calcul_Def_Eff()
             Calcul_Modes_Propres(mot_clef, n_modes)
+            Calcul_Reactions()
             MAJ_Rigidite_Geom()
             Maillage_Assemblage()
             Resol()
           }
-          class real {
-          }
-          class type {
-            mro()*
-          }
-          Elem --|> object
-          Node --|> object
-          pbEF_poutre --|> object
-          denominator --|> object
-          imag --|> object
-          numerator --|> object
-          real --|> object
-          type --|> object
   
        </div>
   </body>
