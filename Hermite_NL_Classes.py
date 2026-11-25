@@ -23,9 +23,9 @@ Ajouts ./ version de novembre 2025 :
     - affichages interactifs (module affichage_interactif, Plotly + ipywidgets)
 
 
-Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d'Hermitte en 2D 
+Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d'Hermite en 2D 
 ====================================================================================================================
-- éléments de poutre Hermitte en 2D (3 DDLs par noeud)
+- éléments de poutre Hermite en 2D (3 DDLs par noeud)
 - calculs en statique y compris charges réparties
 - calcul des charges critiques de flambage
 - calcul des modes propres de vibration

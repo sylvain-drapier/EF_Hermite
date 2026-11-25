@@ -3,6 +3,6 @@ numpy == 1.24.4
 matplotlib == 3.7.5  
 scipy == 1.10.1 
 #sys
-# Hermitte_NL_Classes
+# Hermite_NL_Classes
 plotly >= 5.10    # affichage_interactif.py
 ipywidgets >= 8   # affichage_interactif.py

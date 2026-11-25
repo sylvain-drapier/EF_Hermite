@@ -18,10 +18,10 @@ import os
 import sys
 import numpy as np
 
-# répertoire de ce script (fichiers de données) et répertoire parent (module Hermitte_NL_Classes)
+# répertoire de ce script (fichiers de données) et répertoire parent (module Hermite_NL_Classes)
 REP = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(REP))
-import Hermitte_NL_Classes as Cl
+import Hermite_NL_Classes as Cl
 
 
 # Initialisation de ce qui est de dimension connue

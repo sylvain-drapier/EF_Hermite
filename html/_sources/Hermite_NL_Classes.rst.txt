@@ -1,7 +1,7 @@
-Hermitte\_NL\_Classes module
+Hermite\_NL\_Classes module
 ============================
 
-.. automodule:: Hermitte_NL_Classes
+.. automodule:: Hermite_NL_Classes
    :members:
    :undoc-members:
    :show-inheritance:

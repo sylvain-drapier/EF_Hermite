@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vues interactives (Plotly + ipywidgets) pour Hermitte_NL_Classes
+Vues interactives (Plotly + ipywidgets) pour Hermite_NL_Classes
 ================================================================
 
 Complète ``pbEF_poutre.Affichage`` (matplotlib, figures statiques) sans le modifier :
