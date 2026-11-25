@@ -17,7 +17,7 @@
     <script src="_static/translations.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Recherche" href="search.html" />
-    <link rel="next" title="Mise_en_donnees module" href="Mise_en_donnees.html" />
+    <link rel="next" title="affichage_interactif module" href="affichage_interactif.html" />
     <link rel="prev" title="Python_Files" href="modules.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
@@ -30,7 +30,7 @@
           <a href="py-modindex.html" title="Index des modules Python"
              >modules</a> |</li>
         <li class="right" >
-          <a href="Mise_en_donnees.html" title="Mise_en_donnees module"
+          <a href="affichage_interactif.html" title="affichage_interactif module"
              accesskey="N">suivant</a> |</li>
         <li class="right" >
           <a href="modules.html" title="Python_Files"
@@ -48,8 +48,38 @@
             
   <section id="module-Hermitte_NL_Classes">
 <span id="hermitte-nl-classes-module"></span><h1>Hermitte_NL_Classes module<a class="headerlink" href="#module-Hermitte_NL_Classes" title="Lien permanent vers cette rubrique">¶</a></h1>
-<p>Created on Novembre 2024</p>
+<p>Novembre 2025</p>
 <p>&#64;author: Sylvain Drapier</p>
+<section id="ajouts-version-de-mars-2025">
+<h2>Ajouts ./ version de mars 2025 :<a class="headerlink" href="#ajouts-version-de-mars-2025" title="Lien permanent vers cette rubrique">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p>chargements répartis définis aux noeuds</p></li>
+<li><p>calcul effort tranchant (-dM/dx)</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="ajouts-version-de-novembre-2025">
+<h2>Ajouts ./ version de novembre 2025 :<a class="headerlink" href="#ajouts-version-de-novembre-2025" title="Lien permanent vers cette rubrique">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p>angles en DEGRES : angle d’entrée du maillage (fonct_Maille_Poutre), angle des éléments
+(Elem.angle dans ]-180, 180], calculé par arctan2 à partir de l’ordre des noeuds) ;
+les cosinus et sinus directeurs Elem.C, Elem.S sont utilisés dans tous les calculs</p></li>
+<li><dl class="simple">
+<dt>chargements répartis dans 2 repères, qui se superposent :</dt><dd><ul>
+<li><p>(px, py) constants par élément, dans le REPERE LOCAL de l’élément (x le long de la poutre, y transverse)</p></li>
+<li><p>(p1, p2) définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2), à variation linéaire sur l’élément ;
+projetés dans le repère local par projection_locale (R^T)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>erreurs explicites (ValueError) : élément de longueur nulle, noeud ou élément inexistant, fichiers mal formatés</p></li>
+<li><p>affichages interactifs (module affichage_interactif, Plotly + ipywidgets)</p></li>
+</ul>
+</div></blockquote>
+</section>
 <section id="classes-et-utilitaires-pour-resolution-statique-charges-de-flambage-modes-vibration-avec-des-ef-d-hermitte-en-2d">
 <h2>Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d’Hermitte en 2D<a class="headerlink" href="#classes-et-utilitaires-pour-resolution-statique-charges-de-flambage-modes-vibration-avec-des-ef-d-hermitte-en-2d" title="Lien permanent vers cette rubrique">¶</a></h2>
 <ul class="simple">
@@ -59,7 +89,7 @@
 <li><p>calcul des modes propres de vibration</p></li>
 <li><p>propriétés variables par élément</p></li>
 <li><p>ajout/retrait d’éléments</p></li>
-<li><p>affichage des résultats : u (dép),e (memb),k (courbure), N (eff normal), M (moment),</p></li>
+<li><p>affichage des résultats : u (dép),e (memb),k (courbure), N (eff normal), T (eff tranchant), M (moment),</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Partie 0<span class="colon">:</span></dt>
@@ -90,9 +120,10 @@
 <li><dl class="simple">
 <dt><strong>Classe Node</strong> = Noeuds contenant :</dt><dd><ul class="simple">
 <li><p>numero</p></li>
-<li><p>x et y : coordonnées</p></li>
+<li><p>x1 et x2 : coordonnées dans le repère de structure</p></li>
 <li><p>u et v, u1 et u2, theta: degrés de liberté dans les axes locaux et dans les axes structure</p></li>
 <li><p>position : indice dans la liste “nodes_global” des noeuds construite initialement</p></li>
+<li><p>p1, p2 : efforts répartis définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2) (0 sinon)</p></li>
 </ul>
 </dd>
 </dl>
@@ -101,9 +132,10 @@
 <dt><strong>Classe Elem</strong> = Eléments contenant :</dt><dd><ul class="simple">
 <li><p>numero</p></li>
 <li><p>inode1 et inode2 : numéro des noeuds : ATTENTION l’orientation de l’élément dépend de l’ordre des noeuds</p></li>
-<li><p>angle et longueur : caractéristiques géométriques</p></li>
+<li><p>angle (en DEGRES, dans ]-180, 180], par rapport à x1) et longueur : caractéristiques géométriques</p></li>
 <li><p>ES, EI, Smasse : caractéristiques physiques</p></li>
-<li><p>px et py : chargements linéiques orientés dans le REPERE LOCAL de la poutre (orientation !)</p></li>
+<li><p>px et py : chargements linéiques constants orientés dans le REPERE LOCAL de la poutre (orientation !);
+ils s’ajoutent aux charges (p1, p2) éventuellement définies aux noeuds dans le repère de structure</p></li>
 <li><p>grandeurs élémentaires (raideur initiale, raideur géométrique, masse, seconds membres)</p></li>
 </ul>
 <p><em>Méthodes</em> = construction d’un élément avec calcul de ses grandeurs; mises à jour si changement propriétés et/ou pré-charge flambage, destruction</p>
@@ -164,7 +196,15 @@
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">(px,</span> <span class="pre">py)</span> <span class="pre">:</span> <span class="pre">2</span> <span class="pre">x</span> <span class="pre">float</span></span></dt>
-<dd><p>Chargements répartis : charges linéiques [N.m-1] orientées dans le repère des poutres</p>
+<dd><p>Chargements répartis constants par élément : charges linéiques [N.m-1] dans le REPERE LOCAL de chaque poutre
+(px longitudinal, py transverse ; orientation donnée par l’ordre des noeuds)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">(p1,</span> <span class="pre">p2)</span> <span class="pre">:</span> <span class="pre">2</span> <span class="pre">x</span> <span class="pre">float</span> <span class="pre">(attributs</span> <span class="pre">des</span> <span class="pre">noeuds)</span></span></dt>
+<dd><p>Chargements répartis définis aux noeuds : charges linéiques [N.m-1] dans le REPERE DE STRUCTURE (x1, x2),
+à variation linéaire sur chaque élément ; ils s’ajoutent aux (px, py) des éléments</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -193,11 +233,18 @@
 <span class="n">Smasse</span> <span class="o">=</span> <span class="n">rho</span> <span class="o">*</span> <span class="n">bs</span> <span class="o">*</span> <span class="n">hs</span> <span class="c1"># masse de la section</span>
 <span class="n">meca_elem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">([[</span><span class="n">ES</span><span class="p">,</span> <span class="n">EI</span><span class="p">,</span><span class="n">Smasse</span><span class="p">]],</span><span class="n">nb_elem</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
-<span class="n">px</span> <span class="o">=</span> <span class="mf">0.</span>
+<span class="n">px</span> <span class="o">=</span> <span class="mf">0.</span>  <span class="c1"># repère LOCAL de l&#39;élément</span>
 <span class="n">py</span> <span class="o">=</span> <span class="mf">0.</span>
 <span class="n">px_py</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">([[</span><span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">]],</span><span class="n">nb_elem</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
 <span class="n">props_elem</span> <span class="o">=</span> <span class="p">[</span><span class="n">meca_elem</span><span class="p">,</span> <span class="n">px_py</span><span class="p">]</span>
+
+<span class="c1"># Maillage d&#39;une poutre droite inclinée : angle en DEGRES par rapport à x1</span>
+<span class="n">nodes_global</span><span class="p">,</span> <span class="n">nodes_elem</span> <span class="o">=</span> <span class="n">fonct_Maille_Poutre</span><span class="p">(</span><span class="n">lp</span><span class="p">,</span> <span class="n">Nl</span><span class="p">,</span> <span class="n">angle</span><span class="o">=</span><span class="mf">30.</span><span class="p">)</span>
+
+<span class="c1"># Charges réparties aux noeuds, dans le REPERE DE STRUCTURE (p1 selon x1, p2 selon x2)</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes_global</span><span class="p">:</span>
+    <span class="n">node</span><span class="o">.</span><span class="n">p2</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1000.</span>
 </pre></div>
 </div>
 </section>
@@ -221,7 +268,8 @@
 </dd>
 <dt>pptes_meca<span class="classifier">np.array(3)</span></dt><dd><p>EI, ES, et Smasse</p>
 </dd>
-<dt>px, py<span class="classifier">float</span></dt><dd><p>Charges linéiques longitudinale et transverse dans le repère de l’élément (orientation donnée par l’ordre des noeuds)</p>
+<dt>px_py<span class="classifier">(float, float)</span></dt><dd><p>Charges linéiques constantes longitudinale et transverse dans le REPERE LOCAL de l’élément (orientation donnée par l’ordre des noeuds) ;
+elles s’ajoutent aux charges (p1, p2) éventuellement définies aux noeuds dans le repère de structure</p>
 </dd>
 </dl>
 </div></blockquote>
@@ -247,7 +295,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.Elem">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">Elem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inode1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inode2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meca_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">px_py</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodes_global</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">le</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kel_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kg_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">def_eff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Elem" title="Lien permanent vers cette définition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">Elem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inode1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inode2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meca_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">px_py</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodes_global</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">le</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masse_elem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kel_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kg_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M_e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">def_eff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Elem" title="Lien permanent vers cette définition">¶</a></dt>
 <dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p><em>Remarque :</em> Les noeuds (de type Node) inode1 et inode2 existent et sont utilisés</p>
 <dl class="py attribute">
@@ -270,7 +318,8 @@
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">px_py</span> <span class="pre">:</span> <span class="pre">np.array(2)</span></span></dt>
-<dd><p>efforts linéiques longitudinal et transverse</p>
+<dd><p>efforts linéiques constants, longitudinal et transverse, dans le REPERE LOCAL de l’élément ; 
+ils s’ajoutent aux efforts répartis (p1, p2) éventuellement définis aux noeuds dans le REPERE DE STRUCTURE</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -282,13 +331,20 @@
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">angle</span> <span class="pre">:</span> <span class="pre">float</span> <span class="pre">[=</span> <span class="pre">0]</span></span></dt>
-<dd><p>angle de l’élément par rapport à l’axe x_1</p>
+<dd><p>angle de l’élément par rapport à l’axe x_1, en DEGRES, dans ]-180, 180] ; calculé à partir des coordonnées des noeuds
+(orientation noeud 1 -&gt; noeud 2)</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">le</span> <span class="pre">:</span> <span class="pre">float</span> <span class="pre">[=</span> <span class="pre">0]</span></span></dt>
 <dd><p>longueur élémentaire</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">masse_elem</span> <span class="pre">:</span> <span class="pre">float</span> <span class="pre">[=</span> <span class="pre">0]</span></span></dt>
+<dd><p>masse élémentaire</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -311,8 +367,8 @@
 
 <dl class="py attribute">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">def_eff</span> <span class="pre">:</span> <span class="pre">np.array(4)</span> <span class="pre">[=[]]</span></span></dt>
-<dd><p>contient les déformations et les efforts de l’élément dans le repère local : [u”,v””,N,M]</p>
+<span class="sig-name descname"><span class="pre">def_eff</span> <span class="pre">:</span> <span class="pre">np.array(5)</span> <span class="pre">[=[]]</span></span></dt>
+<dd><p>contient les déformations et les efforts de l’élément dans le repère local : [“u”,””v”,”N”,”T”,”M”]</p>
 </dd></dl>
 
 <dl class="py method">
@@ -324,7 +380,14 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.Elem.mise_a_jour_fe">
 <span class="sig-name descname"><span class="pre">mise_a_jour_fe</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Elem.mise_a_jour_fe" title="Lien permanent vers cette définition">¶</a></dt>
-<dd><p>Si propriétés changent(angle, longueur, chargement)</p>
+<dd><p>Second membre élémentaire (repère de structure) ; à rappeler si propriétés changent (angle, longueur, chargement).
+Somme (superposition) de 2 contributions :</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>(px, py) constants sur l’élément, dans le REPERE LOCAL de l’élément</p></li>
+<li><p>(p1, p2) définis aux noeuds dans le REPERE DE STRUCTURE, à variation linéaire sur l’élément</p></li>
+</ul>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
@@ -345,7 +408,7 @@
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.Modif_Proprietes_Elem">
 <span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">Modif_Proprietes_Elem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pbEF</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ES_el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">EI_el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Smasse_el</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Modif_Proprietes_Elem" title="Lien permanent vers cette définition">¶</a></dt>
 <dd><p>Met à jour la rigidité élastique GLOBALE quand les 
-propriétés méca ES, EI ou Smasse d’un élément changent</p>
+propriétés méca ES, EI ou Smasse d’un élément changent (chargements répartis et CL réputés invariables)</p>
 <ul class="simple">
 <li><p><em>Remarque 1</em> : On ne met pas à jour la rigidité géométrique qui sera mise à jour de toute façon quand les pré-contraintes auront été recalculées - cf fonction MAJ_rigidite_geometrique</p></li>
 <li><p><em>Remarque 2</em> : Précaution à prendre, avant de retrancher les contributions puis de les remplacer, s’assurer qu’elles ne correspondent pas à des ddls dans les CL de Dirichlet</p></li>
@@ -365,7 +428,7 @@ propriétés méca ES, EI ou Smasse d’un élément changent</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.Node">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numero</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Node" title="Lien permanent vers cette définition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numero</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.Node" title="Lien permanent vers cette définition">¶</a></dt>
 <dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py attribute">
 <dt class="sig sig-object py">
@@ -394,6 +457,12 @@ propriétés méca ES, EI ou Smasse d’un élément changent</p>
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">theta</span> <span class="pre">:</span> <span class="pre">float</span></span></dt>
 <dd><p>ddl rotation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">p1,</span> <span class="pre">p2</span> <span class="pre">:</span> <span class="pre">float</span></span></dt>
+<dd><p>p1, p2 : efforts répartis définis au noeud, composantes selon x1 et x2 dans le REPERE DE STRUCTURE (0 sinon)</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -435,7 +504,20 @@ propriétés méca ES, EI ou Smasse d’un élément changent</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.calcul_fe">
 <span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">calcul_fe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">le</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">px</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">py</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.calcul_fe" title="Lien permanent vers cette définition">¶</a></dt>
-<dd><p>Second membre des efforts répartis recalculé avec changement de base</p>
+<dd><p>Second membre des efforts répartis (définis dans repère local) recalculé avec changement de base dans repère de structure</p>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">fe</span> <span class="pre">:</span> <span class="pre">np.array(6)</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Hermitte_NL_Classes.calcul_fe_nodes">
+<span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">calcul_fe_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">le</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pxpy</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.calcul_fe_nodes" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Second membre des efforts répartis à variation linéaire, dont les valeurs aux 2 noeuds de l’élément
+pxpy = [px1, py1, px2, py2] sont données dans le REPERE LOCAL (cf. projection_locale), 
+recalculé avec changement de base dans repère de structure</p>
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">fe</span> <span class="pre">:</span> <span class="pre">np.array(6)</span></span></dt>
@@ -495,6 +577,7 @@ pour ne pas gérer les éléments spéciaux -&gt; les noeuds sont tracés 2 fois
 <li><p>“e”: déformation</p></li>
 <li><p>“K” : courbure</p></li>
 <li><p>“N” : effort normal</p></li>
+<li><p>“T” : effort tranchant</p></li>
 <li><p>“M” : moment de flexion</p></li>
 <li><p>“ES” : rigidité de membrane</p></li>
 <li><p>“EI” : rigidité de flexion</p></li>
@@ -600,20 +683,22 @@ retranche puis remplace ses composantes dans la rigidité globale par Effort_N_(
 <dl class="py function">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.fonct_Maille_Poutre">
 <span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">fonct_Maille_Poutre</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.fonct_Maille_Poutre" title="Lien permanent vers cette définition">¶</a></dt>
-<dd><p>Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un angle par rapport à x_1</p>
+<dd><p>Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un angle (en DEGRES) par rapport à x_1</p>
+<p><em>Paramètres :</em> lp (float) longueur ; Nl (int) nombre d’éléments ; angle (float) angle en DEGRES par rapport à x_1
+(les noeuds sont numérotés de 1 à Nl+1 depuis l’origine, ce qui fixe l’orientation des éléments)</p>
 <p><em>Retourne :</em> la liste des noeuds et la liste des connectivités initialisées</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="Hermitte_NL_Classes.fonct_Maille_depuis_Fichier">
 <span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">fonct_Maille_depuis_Fichier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nomfic_noeuds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nomfic_elements</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.fonct_Maille_depuis_Fichier" title="Lien permanent vers cette définition">¶</a></dt>
-<dd><p>Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes : num_noeud, x, y) et 
+<dd><p>Initialise les listes de données pour une sructure réticulée à partir de fichiers contenant les noeuds (3 colonnes ou 5 colonnes : num_noeud, x1, x2 + éventuellement p1, p2 charges réparties dans le REPERE DE STRUCTURE) et 
 les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
 <p><em>Retourne :</em> la liste des noeuds “nodes_global” et la connectivité des éléments “nodes_elem”</p>
 <dl class="simple">
 <dt><em>Vérifications :</em> </dt><dd><ol class="arabic simple">
 <li><p>tous les noeuds nécessaires pour construire les éléments existent; sinon arrêt et affichage Erreur</p></li>
-<li><p>les noeuds non utilisés sont supprimés - message d’avertissement</p></li>
+<li><p>tous les noeuds définis sont utilisés par au moins un élément; sinon arrêt et affichage Erreur</p></li>
 </ol>
 </dd>
 </dl>
@@ -624,15 +709,14 @@ les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">pbEF_poutre</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nodes_global</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nodes_elem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">props_elem</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.pbEF_poutre" title="Lien permanent vers cette définition">¶</a></dt>
 <dd><p>Bases : <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p><strong>Objet PROBLEME = résolution par EF et post-traitement</strong></p>
-<dl class="simple">
+<dl>
 <dt><em>Méthodes :</em></dt><dd><ol class="arabic simple">
 <li><p>initialisation (maillage et assemblage),</p></li>
 <li><p>prise en compte des CL Neumann et Dirichlet (homgènes et non-homogènes),</p></li>
 <li><p>résolution,</p></li>
-<li><p>calculs déformations et efforts internes : utilise fonction “Calcul_Def_Eff” définie dans “BWB_Classes.py”</p></li>
-<li><p>affichage = utilise fonction “Affichage” définie dans “BWB_Classes.py”</p></li>
-<li><p>mise à jour raideur suite à mise à jour des propriétés physiques d’un élément</p></li>
 </ol>
+<p>4. calculs déformations et efforts internes : utilise fonction “Calcul_Def_Eff”
+6. mise à jour raideur suite à mise à jour des propriétés physiques d’un élément</p>
 </dd>
 </dl>
 <p><em>Remarque 1:</em> la discrétisation spatiale et les conditions aux limites ne changent pas pour une instance pbEF; le maillage EF peut changer !</p>
@@ -709,8 +793,20 @@ les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
 <span class="sig-name descname"><span class="pre">-</span> <span class="pre">nodes_global</span> <span class="pre">(liste</span> <span class="pre">des</span> <span class="pre">noeuds)</span></span></dt>
 <dd></dd></dl>
 
-<p><em>Retorune :</em> nodes_global, liste global des noeuds mis à jour</p>
+<p><em>Retourne :</em> nodes_global, liste global des noeuds mis à jour</p>
 </dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Hermitte_NL_Classes.projection_locale">
+<span class="sig-prename descclassname"><span class="pre">Hermitte_NL_Classes.</span></span><span class="sig-name descname"><span class="pre">projection_locale</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_noeuds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Hermitte_NL_Classes.projection_locale" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Projette dans le repère local de l’élément les charges réparties définies aux 2 noeuds dans le repère de structure :
+p_noeuds = [p1_noeud1, p2_noeud1, p1_noeud2, p2_noeud2]  -&gt;  [px1, py1, px2, py2] = R^T p</p>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">pxpy</span> <span class="pre">:</span> <span class="pre">np.array(4)</span></span></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -754,6 +850,8 @@ les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
     <h3><a href="index.html">Table des matières</a></h3>
     <ul>
 <li><a class="reference internal" href="#">Hermitte_NL_Classes module</a><ul>
+<li><a class="reference internal" href="#ajouts-version-de-mars-2025">Ajouts ./ version de mars 2025 :</a></li>
+<li><a class="reference internal" href="#ajouts-version-de-novembre-2025">Ajouts ./ version de novembre 2025 :</a></li>
 <li><a class="reference internal" href="#classes-et-utilitaires-pour-resolution-statique-charges-de-flambage-modes-vibration-avec-des-ef-d-hermitte-en-2d">Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d’Hermitte en 2D</a></li>
 <li><a class="reference internal" href="#structures-de-donnees-du-probleme">1/ Structures de données du problème</a></li>
 <li><a class="reference internal" href="#variables-globales-qui-sont-rattachees-a-l-objet-principal-de-type-pbef-poutre">2/ Variables globales qui sont rattachées à l’objet principal de type <em>pbEF_poutre</em></a></li>
@@ -770,8 +868,8 @@ les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
   </div>
   <div>
     <h4>Sujet suivant</h4>
-    <p class="topless"><a href="Mise_en_donnees.html"
-                          title="Chapitre suivant">Mise_en_donnees module</a></p>
+    <p class="topless"><a href="affichage_interactif.html"
+                          title="Chapitre suivant">affichage_interactif module</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>Cette page</h3>
@@ -804,7 +902,7 @@ les connectivités (3 colonnes : num_elem, noeud1, noeud2)</p>
           <a href="py-modindex.html" title="Index des modules Python"
              >modules</a> |</li>
         <li class="right" >
-          <a href="Mise_en_donnees.html" title="Mise_en_donnees module"
+          <a href="affichage_interactif.html" title="affichage_interactif module"
              >suivant</a> |</li>
         <li class="right" >
           <a href="modules.html" title="Python_Files"

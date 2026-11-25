@@ -543,9 +543,9 @@ def _sortie(construire, controles, lignes):
 def vue(pb, champ='u', ampli=None, representation='couleur'):
     """Vue interactive d'un calcul statique : champ, représentation, amplification, options.
 
-    ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
-            = 10 % de la taille de la structure) ; réglable ensuite avec le curseur.
-    representation : 'couleur' (champ en couleur sur la déformée) ou 'diagramme' (N, T, M).
+    - ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
+      = 10 % de la taille de la structure) ; réglable ensuite avec le curseur.
+    - representation : 'couleur' (champ en couleur sur la déformée) ou 'diagramme' (N, T, M).
 
     La vue travaille sur une COPIE de pb faite à l'appel : la suite du notebook peut modifier pb
     (propriétés, nouveau calcul) sans changer ce qu'affichent les contrôles."""

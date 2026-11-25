@@ -5,4 +5,5 @@ Python_Files
    :maxdepth: 4
 
    Hermitte_NL_Classes
+   affichage_interactif
    Mise_en_donnees

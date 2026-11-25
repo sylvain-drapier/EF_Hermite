@@ -1,0 +1,7 @@
+affichage\_interactif module
+============================
+
+.. automodule:: affichage_interactif
+   :members:
+   :undoc-members:
+   :show-inheritance:
