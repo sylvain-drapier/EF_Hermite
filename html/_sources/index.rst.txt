@@ -15,7 +15,7 @@
    :alt: Logo_MSE
    :scale: 40%
 
-Documentation de EF Hermitte
+Documentation de EF Hermite
 ============================
 
 .. toctree::
@@ -26,7 +26,12 @@ Documentation de EF Hermitte
 
 Diagramme UML
 =============
-.. uml ::
+
+Diagramme des classes du module Hermite_NL_Classes (généré par ``pyreverse``) :
+
+.. figure:: /images/classes.png
+   :align: center
+   :alt: Diagramme UML des classes Node, Elem et pbEF_poutre
 
 Indexes et tables
 ==================

@@ -1,0 +1,7 @@
+Hermite\_NL\_Classes module
+============================
+
+.. automodule:: Hermite_NL_Classes
+   :members:
+   :undoc-members:
+   :show-inheritance:

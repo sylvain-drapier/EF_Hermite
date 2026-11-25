@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vues interactives (Plotly + ipywidgets) pour Hermitte_NL_Classes
+Vues interactives (Plotly + ipywidgets) pour Hermite_NL_Classes
 ================================================================
 
 Complète ``pbEF_poutre.Affichage`` (matplotlib, figures statiques) sans le modifier :
@@ -543,9 +543,9 @@ def _sortie(construire, controles, lignes):
 def vue(pb, champ='u', ampli=None, representation='couleur'):
     """Vue interactive d'un calcul statique : champ, représentation, amplification, options.
 
-    ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
-            = 10 % de la taille de la structure) ; réglable ensuite avec le curseur.
-    representation : 'couleur' (champ en couleur sur la déformée) ou 'diagramme' (N, T, M).
+    - ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
+      = 10 % de la taille de la structure) ; réglable ensuite avec le curseur.
+    - representation : 'couleur' (champ en couleur sur la déformée) ou 'diagramme' (N, T, M).
 
     La vue travaille sur une COPIE de pb faite à l'appel : la suite du notebook peut modifier pb
     (propriétés, nouveau calcul) sans changer ce qu'affichent les contrôles."""

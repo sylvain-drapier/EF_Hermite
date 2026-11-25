@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>affichage_interactif module &#8212; Documentation HermNL V_Non-Lineaire</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/translations.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Recherche" href="search.html" />
+    <link rel="next" title="Mise_en_donnees module" href="Mise_en_donnees.html" />
+    <link rel="prev" title="Hermite_NL_Classes module" href="Hermite_NL_Classes.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="Index général"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Index des modules Python"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Mise_en_donnees.html" title="Mise_en_donnees module"
+             accesskey="N">suivant</a> |</li>
+        <li class="right" >
+          <a href="Hermite_NL_Classes.html" title="Hermite_NL_Classes module"
+             accesskey="P">précédent</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Documentation HermNL V_Non-Lineaire</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" accesskey="U">Python_Files</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">affichage_interactif module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-affichage_interactif">
+<span id="affichage-interactif-module"></span><h1>affichage_interactif module<a class="headerlink" href="#module-affichage_interactif" title="Lien permanent vers cette rubrique">¶</a></h1>
+<section id="vues-interactives-plotly-ipywidgets-pour-hermite-nl-classes">
+<h2>Vues interactives (Plotly + ipywidgets) pour Hermite_NL_Classes<a class="headerlink" href="#vues-interactives-plotly-ipywidgets-pour-hermite-nl-classes" title="Lien permanent vers cette rubrique">¶</a></h2>
+<p>Complète <code class="docutils literal notranslate"><span class="pre">pbEF_poutre.Affichage</span></code> (matplotlib, figures statiques) sans le modifier :
+le module ne fait que LIRE l’objet problème (noeuds, éléments, ddls, modes).</p>
+<p>Utilisation dans un notebook</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">affichage_interactif</span> <span class="k">as</span> <span class="nn">AI</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">vue</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span>                      <span class="c1"># statique : choix du champ, survol des valeurs</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">vue_modes</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span>                <span class="c1"># flambage / vibration : choix du mode + animation</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">compare</span><span class="p">([</span><span class="n">pb2</span><span class="p">,</span> <span class="n">pb4</span><span class="p">,</span> <span class="n">pb8</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;2 élts&#39;</span><span class="p">,</span> <span class="s1">&#39;4 élts&#39;</span><span class="p">,</span> <span class="s1">&#39;8 élts&#39;</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">tableau_noeuds</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>    <span class="c1"># ddls et réactions aux noeuds</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">tableau_elements</span><span class="p">(</span><span class="n">pb</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>  <span class="c1"># géométrie, charges et efforts internes des éléments</span>
+<span class="n">AI</span><span class="o">.</span><span class="n">tableau_valeurs_propres</span><span class="p">([</span><span class="n">pb0</span><span class="p">,</span> <span class="n">pb1</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;initial&#39;</span><span class="p">,</span> <span class="s1">&#39;modifié&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Sans ipywidgets, les fonctions <code class="docutils literal notranslate"><span class="pre">figure</span></code>, <code class="docutils literal notranslate"><span class="pre">figure_mode</span></code> et <code class="docutils literal notranslate"><span class="pre">compare</span></code> renvoient
+des figures Plotly utilisables seules (<code class="docutils literal notranslate"><span class="pre">fig.show()</span></code>, <code class="docutils literal notranslate"><span class="pre">fig.write_html(...)</span></code>).</p>
+<section id="interpolation-d-hermite">
+<h3>Interpolation d’Hermite<a class="headerlink" href="#interpolation-d-hermite" title="Lien permanent vers cette rubrique">¶</a></h3>
+<p>La déformée est tracée avec les fonctions de forme de l’élément, et non par des segments
+droits entre noeuds. Dans le repère local (t, n) de l’élément, pour xi = x/le dans [0, 1] :</p>
+<blockquote>
+<div><p>u(xi) = (1 - xi) u_1 + xi u_2                                   (linéaire)
+v(xi) = H1 v_1 + le H2 theta_1 + H3 v_2 + le H4 theta_2           (cubique)</p>
+<p>H1 = 1 - 3 xi^2 + 2 xi^3     H2 = xi - 2 xi^2 + xi^3
+H3 = 3 xi^2 - 2 xi^3         H4 = -xi^2 + xi^3</p>
+</div></blockquote>
+<dl class="simple">
+<dt>Les champs le long de l’élément s’en déduisent (convention du code) :</dt><dd><p>N = ES du/dx (constant),  M = EI d2v/dx2 (linéaire),  T = -dM/dx (constant),  K = d2v/dx2.</p>
+</dd>
+</dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.Cl_index">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">Cl_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.Cl_index" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Position du noeud de numéro <cite>num</cite> dans pb.nodes_global.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.amplification_auto">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">amplification_auto</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.amplification_auto" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Facteur tel que le plus grand déplacement nodal vaille <cite>fraction</cite> de la taille de la structure.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.compare">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">compare</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">liste_pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hermite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ampli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">titre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.compare" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Superpose les déformées (mode=None) ou le mode <cite>mode</cite> de plusieurs problèmes,
+par exemple plusieurs maillages pour illustrer la convergence en h.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.ddls_noeuds">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">ddls_noeuds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.ddls_noeuds" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Tableau (nb_noeuds, 3) des ddls (u1, u2, theta) dans le repère de structure.
+q = None : solution statique pb.dofs ; sinon un vecteur de ddls (mode propre…).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.figure">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">figure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">champ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'u'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ampli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hermite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">representation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'couleur'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maillage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeros</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">efforts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">appuis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">titre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.figure" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Figure Plotly d’un champ sur la structure.</p>
+<ul class="simple">
+<li><p>champ : “u”, “N”, “T”, “M”, “K”, “e”, “ES”, “EI” (cf. CHAMPS)</p></li>
+<li><p>representation : “couleur” (champ en couleur sur la déformée) ou
+“diagramme” (diagramme du champ tracé perpendiculairement aux poutres, côté normale locale n
+pour les valeurs positives — n = t tourné de +90°, t orienté du noeud 1 vers le noeud 2)</p></li>
+<li><p>ampli : amplification de la déformée (None = automatique)</p></li>
+<li><p>hermite : déformée interpolée par les fonctions d’Hermite (sinon segments droits)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.figure_mode">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">figure_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hermite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maillage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeros</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">appuis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_images</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">24</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ampli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.figure_mode" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Mode propre k (1 = premier) de pb.mode_min, animé (bouton ▶).</p>
+<p>Le mode est normé (plus grande translation = 1) puis amplifié à <cite>ampli</cite> × taille de la structure.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.interpole_elem">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">interpole_elem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hermite</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.interpole_elem" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Interpolation sur un élément.</p>
+<dl class="simple">
+<dt><em>Retourne</em><span class="classifier">dict avec</span></dt><dd><ul class="simple">
+<li><p>xi : abscisses réduites (n_pts)</p></li>
+<li><p>X  : positions initiales (n_pts, 2)</p></li>
+<li><p>d  : déplacements dans le repère de structure (n_pts, 2)</p></li>
+<li><p>n  : normale locale (2,) = (-S, C)</p></li>
+<li><p>champs : dict des champs le long de l’élément (toujours calculés avec Hermite)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.normalise_mode">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">normalise_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.normalise_mode" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Mode normé : plus grande translation = 1, et positive (le signe d’un mode est arbitraire).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.tableau_elements">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">tableau_elements</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">titre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Éléments</span> <span class="pre">:</span> <span class="pre">géométrie,</span> <span class="pre">charges</span> <span class="pre">réparties</span> <span class="pre">(repère</span> <span class="pre">local)</span> <span class="pre">et</span> <span class="pre">efforts</span> <span class="pre">internes'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.tableau_elements" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Tableau des éléments : noeuds, angle (degrés), longueur, (px, py) locaux, N, T, M au milieu de l’élément.
+Les efforts sont ceux de pb.Calcul_Def_Eff() (convention du code : M = EI v””, T = -dM/dx).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.tableau_noeuds">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">tableau_noeuds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">titre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Noeuds</span> <span class="pre">:</span> <span class="pre">déplacements</span> <span class="pre">et</span> <span class="pre">réactions</span> <span class="pre">(repère</span> <span class="pre">de</span> <span class="pre">structure)'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.tableau_noeuds" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Tableau des noeuds : coordonnées, ddls (u1, u2, theta) et réactions (R1, R2, Mr).
+Les réactions sont celles de pb.reactions (nulles tant que pb.Calcul_Reactions() n’a pas été appelé).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.tableau_valeurs_propres">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">tableau_valeurs_propres</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">liste_pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">noms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nom_reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Référence'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">titre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.tableau_valeurs_propres" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Valeurs propres (pulsations en rad/s ou multiplicateurs de flambage) de un ou plusieurs problèmes,
+mode par mode. reference : liste de valeurs (analytiques…) ajoutée en dernière colonne, avec
+l’écart relatif du premier problème ; à n’utiliser que si elle correspond au même problème.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.vue">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">vue</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">champ</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'u'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ampli</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">representation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'couleur'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.vue" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Vue interactive d’un calcul statique : champ, représentation, amplification, options.</p>
+<ul class="simple">
+<li><p>ampli : amplification initiale de la déformée (None : automatique, plus grand déplacement
+= 10 % de la taille de la structure) ; réglable ensuite avec le curseur.</p></li>
+<li><p>representation : “couleur” (champ en couleur sur la déformée) ou “diagramme” (N, T, M).</p></li>
+</ul>
+<p>La vue travaille sur une COPIE de pb faite à l’appel : la suite du notebook peut modifier pb
+(propriétés, nouveau calcul) sans changer ce qu’affichent les contrôles.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="affichage_interactif.vue_modes">
+<span class="sig-prename descclassname"><span class="pre">affichage_interactif.</span></span><span class="sig-name descname"><span class="pre">vue_modes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#affichage_interactif.vue_modes" title="Lien permanent vers cette définition">¶</a></dt>
+<dd><p>Vue interactive des modes (flambage ou vibration) : choix du mode, animation dans la figure.</p>
+<p>mode : rang du mode affiché au départ (1 = premier), comme “vp” dans pb.Affichage(“X”, …, vp).</p>
+<p>La vue travaille sur une COPIE de pb faite à l’appel (cf. vue).</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table des matières</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">affichage_interactif module</a><ul>
+<li><a class="reference internal" href="#vues-interactives-plotly-ipywidgets-pour-hermite-nl-classes">Vues interactives (Plotly + ipywidgets) pour Hermite_NL_Classes</a><ul>
+<li><a class="reference internal" href="#interpolation-d-hermite">Interpolation d’Hermite</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Sujet précédent</h4>
+    <p class="topless"><a href="Hermite_NL_Classes.html"
+                          title="Chapitre précédent">Hermite_NL_Classes module</a></p>
+  </div>
+  <div>
+    <h4>Sujet suivant</h4>
+    <p class="topless"><a href="Mise_en_donnees.html"
+                          title="Chapitre suivant">Mise_en_donnees module</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>Cette page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/affichage_interactif.rst.txt"
+            rel="nofollow">Montrer le code source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Recherche rapide</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="Index général"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Index des modules Python"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Mise_en_donnees.html" title="Mise_en_donnees module"
+             >suivant</a> |</li>
+        <li class="right" >
+          <a href="Hermite_NL_Classes.html" title="Hermite_NL_Classes module"
+             >précédent</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Documentation HermNL V_Non-Lineaire</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="modules.html" >Python_Files</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">affichage_interactif module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2024, S. Drapier.
+      Créé en utilisant <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.0.2.
+    </div>
+  </body>
+</html>

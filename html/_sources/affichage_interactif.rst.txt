@@ -1,7 +1,7 @@
-Hermitte\_NL\_Classes module
+affichage\_interactif module
 ============================
 
-.. automodule:: Hermitte_NL_Classes
+.. automodule:: affichage_interactif
    :members:
    :undoc-members:
    :show-inheritance:

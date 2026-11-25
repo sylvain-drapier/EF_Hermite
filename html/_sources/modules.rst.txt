@@ -4,5 +4,6 @@ Python_Files
 .. toctree::
    :maxdepth: 4
 
-   Hermitte_NL_Classes
+   Hermite_NL_Classes
+   affichage_interactif
    Mise_en_donnees

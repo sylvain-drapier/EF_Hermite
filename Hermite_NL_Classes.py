@@ -10,10 +10,22 @@ Ajouts ./ version de mars 2025 :
     - chargements répartis définis aux noeuds
     - calcul effort tranchant (-dM/dx)
 
+Ajouts ./ version de novembre 2025 :
+====================================
+    - angles en DEGRES : angle d'entrée du maillage (fonct_Maille_Poutre), angle des éléments
+      (Elem.angle dans ]-180, 180], calculé par arctan2 à partir de l'ordre des noeuds) ;
+      les cosinus et sinus directeurs Elem.C, Elem.S sont utilisés dans tous les calculs
+    - chargements répartis dans 2 repères, qui se superposent :
+        - (px, py) constants par élément, dans le REPERE LOCAL de l'élément (x le long de la poutre, y transverse)
+        - (p1, p2) définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2), à variation linéaire sur l'élément ;
+          projetés dans le repère local par projection_locale (R^T)
+    - erreurs explicites (ValueError) : élément de longueur nulle, noeud ou élément inexistant, fichiers mal formatés
+    - affichages interactifs (module affichage_interactif, Plotly + ipywidgets)
 
-Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d'Hermitte en 2D 
+
+Classes et utilitaires pour résolution statique + charges de flambage + modes vibration avec des EF d'Hermite en 2D 
 ====================================================================================================================
-- éléments de poutre Hermitte en 2D (3 DDLs par noeud)
+- éléments de poutre Hermite en 2D (3 DDLs par noeud)
 - calculs en statique y compris charges réparties
 - calcul des charges critiques de flambage
 - calcul des modes propres de vibration
@@ -41,7 +53,7 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
 ====================================
 - **Classe Node** = Noeuds contenant :
     - numero
-    - x et y : coordonnées
+    - x1 et x2 : coordonnées dans le repère de structure
     - u et v, u1 et u2, theta: degrés de liberté dans les axes locaux et dans les axes structure
     - position : indice dans la liste 'nodes_global' des noeuds construite initialement
     - p1, p2 : efforts répartis définis aux noeuds, dans le REPERE DE STRUCTURE (x1, x2) (0 sinon)
@@ -89,7 +101,13 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
     
 .. attribute:: (px, py) : 2 x float
 
-    Chargements répartis : charges linéiques [N.m-1] orientées dans le repère des poutres
+    Chargements répartis constants par élément : charges linéiques [N.m-1] dans le REPERE LOCAL de chaque poutre
+    (px longitudinal, py transverse ; orientation donnée par l'ordre des noeuds)
+
+.. attribute:: (p1, p2) : 2 x float (attributs des noeuds)
+
+    Chargements répartis définis aux noeuds : charges linéiques [N.m-1] dans le REPERE DE STRUCTURE (x1, x2),
+    à variation linéaire sur chaque élément ; ils s'ajoutent aux (px, py) des éléments
     
 .. attribute:: fixed_dofs : list([])
 
@@ -115,11 +133,18 @@ Classes et utilitaires pour résolution statique + charges de flambage + modes v
     Smasse = rho * bs * hs # masse de la section
     meca_elem = np.repeat([[ES, EI,Smasse]],nb_elem,axis=0)
     
-    px = 0.
+    px = 0.  # repère LOCAL de l'élément
     py = 0.
     px_py = np.repeat([[px, py]],nb_elem,axis=0)
     
     props_elem = [meca_elem, px_py]
+
+    # Maillage d'une poutre droite inclinée : angle en DEGRES par rapport à x1
+    nodes_global, nodes_elem = fonct_Maille_Poutre(lp, Nl, angle=30.)
+
+    # Charges réparties aux noeuds, dans le REPERE DE STRUCTURE (p1 selon x1, p2 selon x2)
+    for node in nodes_global:
+        node.p2 = -1000.
       
     
 
@@ -420,6 +445,7 @@ class Elem:
     def mise_a_jour_fe(self):
         """ Second membre élémentaire (repère de structure) ; à rappeler si propriétés changent (angle, longueur, chargement).
         Somme (superposition) de 2 contributions :
+
             - (px, py) constants sur l'élément, dans le REPERE LOCAL de l'élément
             - (p1, p2) définis aux noeuds dans le REPERE DE STRUCTURE, à variation linéaire sur l'élément
         """
@@ -963,6 +989,9 @@ Prise en compte des conditions de Neumann et Dirichlet homogènes / non-homogèn
 def fonct_Maille_Poutre(lp, Nl , angle):
     """
 Maille une poutre de longueur lp avec Nl éléments, formant éventuellement un angle (en DEGRES) par rapport à x_1 
+
+*Paramètres :* lp (float) longueur ; Nl (int) nombre d'éléments ; angle (float) angle en DEGRES par rapport à x_1
+(les noeuds sont numérotés de 1 à Nl+1 depuis l'origine, ce qui fixe l'orientation des éléments)
 
 *Retourne :* la liste des noeuds et la liste des connectivités initialisées
 

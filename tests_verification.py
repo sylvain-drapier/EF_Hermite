@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Tests de vérification de Hermitte_NL_Classes par comparaison à des solutions analytiques.
+Tests de vérification de Hermite_NL_Classes par comparaison à des solutions analytiques.
 
 Lancement :  python tests_verification.py      (ou : pytest tests_verification.py)
 
@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.use("Agg")  # pas de fenêtre graphique pendant les tests
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import Hermitte_NL_Classes as Cl
+import Hermite_NL_Classes as Cl
 
 # Données communes : poutre rectangulaire en aluminium
 E, b, h, rho, L = 70e9, 0.15, 0.3, 2.6e3, 2.0
